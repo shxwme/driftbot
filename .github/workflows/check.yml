@@ -1,0 +1,38 @@
+name: Drift Radar check
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "0 6,14,20 * * *"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: drift-radar-state
+  cancel-in-progress: false
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install OCR engine
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y tesseract-ocr tesseract-ocr-eng tesseract-ocr-pol tesseract-ocr-fra
+      - run: pip install -r requirements.txt
+      - run: python main.py --bootstrap
+        env:
+          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+          YOUTUBE_API_KEY: ${{ secrets.YOUTUBE_API_KEY }}
+      - name: Commit updated state
+        run: |
+          git config user.name "drift-radar[bot]"
+          git config user.email "drift-radar[bot]@users.noreply.github.com"
+          git add state.json
+          git diff --cached --quiet || git commit -m "chore: update drift radar state"
+          git push
