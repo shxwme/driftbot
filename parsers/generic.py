@@ -171,36 +171,36 @@ def fetch_html(source: dict[str, Any]) -> dict[str, Any]:
             if re.search(r"calendar|calendrier|kalendar", f"{url} {alt}", re.I)
         ]
         for image_url, alt in (calendar_refs or image_refs[:10]):
-                candidates = [image_url, *source.get("fallback_image_urls", [])]
-                image_response = None
-                for candidate_url in candidates:
-                    response = requests.get(
-                        candidate_url,
-                        headers={"User-Agent": "DriftRadar/1.0", "Referer": source["url"]},
-                        timeout=30,
-                    )
-                    if response.ok:
-                        image_response = response
-                        image_url = candidate_url
-                        break
-                if image_response is None:
-                    raise RuntimeError(f"calendar image unavailable: {image_url}")
-                if len(image_response.content) > 12 * 1024 * 1024:
-                    raise RuntimeError(f"calendar image is too large: {image_url}")
-                image_bytes = image_response.content
                 try:
+                    candidates = [image_url, *source.get("fallback_image_urls", [])]
+                    image_response = None
+                    for candidate_url in candidates:
+                        response = requests.get(
+                            candidate_url,
+                            headers={"User-Agent": "DriftRadar/1.0", "Referer": source["url"]},
+                            timeout=30,
+                        )
+                        if response.ok:
+                            image_response = response
+                            image_url = candidate_url
+                            break
+                    if image_response is None:
+                        raise RuntimeError("calendar image unavailable")
+                    if len(image_response.content) > 12 * 1024 * 1024:
+                        raise RuntimeError("calendar image is too large")
+                    image_bytes = image_response.content
                     ocr_text = pytesseract.image_to_string(Image.open(BytesIO(image_bytes)), timeout=45)
-                except pytesseract.TesseractNotFoundError as exc:
-                    raise RuntimeError("Tesseract OCR engine is not installed") from exc
-                except RuntimeError as exc:
-                    raise RuntimeError(f"OCR failed for {image_url}: {exc}") from exc
-                images.append({
-                    "url": image_url,
-                    "alt": alt,
-                    "sha256": hashlib.sha256(image_bytes).hexdigest(),
-                    "ocr_text": " ".join(ocr_text.split()),
-                    "date_candidates": extract_date_candidates(ocr_text),
-                })
+                    images.append({
+                        "url": image_url,
+                        "alt": alt,
+                        "sha256": hashlib.sha256(image_bytes).hexdigest(),
+                        "ocr_text": " ".join(ocr_text.split()),
+                        "date_candidates": extract_date_candidates(ocr_text),
+                    })
+                except pytesseract.TesseractNotFoundError:
+                    result.setdefault("image_errors", []).append({"url": image_url, "error": "tesseract_missing"})
+                except (requests.RequestException, RuntimeError, OSError) as exc:
+                    result.setdefault("image_errors", []).append({"url": image_url, "error": str(exc)})
         result["image_calendar"] = True
         result["image_urls"] = images
         ocr_dates = [candidate for image in images for candidate in image["date_candidates"]]
