@@ -12,7 +12,7 @@ sources:
   - {id: drift-league-gb-calendar, name: "Drift League GB", type: html, url: "https://driftleague.co.uk/rounds/list/", selector: main, needs_review: true}
   - {id: formula-drift-calendar, name: "Formula DRIFT PRO / PROSPEC", type: html, url: "https://www.formulad.com/schedule", selector: main, watch_url: "https://www.youtube.com/@formuladrift", needs_review: true}
   - {id: fdj-calendar, name: "Formula DRIFT Japan", type: html, url: "https://formulad.jp/", selector: main, needs_review: true}
-  - {id: d1gp-calendar, name: "D1 GRAND PRIX / D1 LIGHTS", type: html, url: "https://d1gp.co.jp/category/gp/2026-d1gp/", selector: main, needs_review: true}
+  - {id: d1gp-calendar, name: "D1 GRAND PRIX / D1 LIGHTS", type: html, url: "https://d1gp.co.jp/category/gp/2026-d1gp/", fallback_urls: ["https://r.jina.ai/http://d1gp.co.jp/category/gp/2026-d1gp/"], selector: body, needs_review: true}
   - {id: d1nz-calendar, name: "D1NZ National Drifting Championship", type: html, url: "https://motorsport.org.nz/championships/d1nz/", selector: main, needs_review: true}
   - {id: pfd-youtube, name: "PFD / DMP YouTube", type: youtube, channel_handle: "@pfddrift", needs_review: true}
   - {id: drift-open-youtube, name: "Drift Open YouTube", type: youtube, channel_handle: "@driftopen", needs_review: true}

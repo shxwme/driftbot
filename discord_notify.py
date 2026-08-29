@@ -96,14 +96,30 @@ def send_webhook(message: str | dict[str, Any], *, dry_run: bool = False) -> Non
 
 
 def format_change(source: dict[str, Any], before: Any, after: Any) -> dict[str, Any] | None:
-    source_name = source.get("name", source.get("id", "źródło"))
-    if not isinstance(after, dict) or not _upcoming_events([(source, after)]):
+    return format_change_digest([(source, after)])
+
+
+def _polish_count(count: int, singular: str, paucal: str, plural: str) -> str:
+    if count == 1:
+        noun = singular
+    elif count % 10 in (2, 3, 4) and count % 100 not in (12, 13, 14):
+        noun = paucal
+    else:
+        noun = plural
+    return f"{count} {noun}"
+
+
+def format_change_digest(observations: list[tuple[dict[str, Any], Any]]) -> dict[str, Any] | None:
+    upcoming = [observation for observation in observations if _upcoming_events([observation])]
+    if not upcoming:
         return None
-    payload = format_upcoming_digest([(source, after)])
+    payload = format_upcoming_digest(upcoming)
     embed = payload["embeds"][0]
-    embed["title"] = f"🔔 DRIFT RADAR · aktualizacja: {source_name}"
-    embed["description"] = "Wykryto zmianę w źródle. Poniżej pokazano tylko aktualne, nadchodzące daty."
-    payload["content"] = f"🔔 Drift Radar: aktualizacja danych — {source_name}"
+    embed["title"] = "🔔 DRIFT RADAR · Aktualizacja kalendarzy"
+    source_count = _polish_count(len(upcoming), "źródle", "źródłach", "źródłach")
+    calendar_count = _polish_count(len(upcoming), "kalendarz", "kalendarze", "kalendarzy")
+    embed["description"] = f"Wykryto zmiany w {source_count}. Poniżej pokazuję wyłącznie aktualne, nadchodzące rundy."
+    payload["content"] = f"🔔 **Drift Radar** · zaktualizowano {calendar_count}"
     return payload
 
 

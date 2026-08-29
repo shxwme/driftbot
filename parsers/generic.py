@@ -80,6 +80,11 @@ def extract_date_candidates(text: str, *, default_year: int | None = None) -> li
         key = (start.isoformat(), end.isoformat())
         found.setdefault(key, {"raw": raw, "start": key[0], "end": key[1]})
 
+    def is_round_number(match: re.Match[str]) -> bool:
+        """Reject labels such as ``Round 7 Sep`` being read as 7 September."""
+        prefix = text[max(0, match.start() - 16) : match.start()]
+        return bool(re.search(r"(?:round|rnd|rd)\.?\s*$", prefix, re.I))
+
     for match in re.finditer(r"\b(\d{1,2})\s*[–-]\s*(\d{1,2})[./](\d{1,2})[./](20\d{2})\b", text):
         day_a, day_b, month, year = map(int, match.groups())
         try:
@@ -92,6 +97,24 @@ def extract_date_candidates(text: str, *, default_year: int | None = None) -> li
         try:
             value = date(year, month, day)
             add(match.group(0), value, value)
+        except ValueError:
+            continue
+
+    for match in re.finditer(
+        r"\b([A-Za-z]{3,9})\s+(\d{1,2}),\s*(20\d{2})\s*[–-]\s*"
+        r"([A-Za-z]{3,9})\s+(\d{1,2}),\s*(20\d{2})\b",
+        text,
+    ):
+        month_a, day_a, year_a, month_b, day_b, year_b = match.groups()
+        month_a_num = MONTHS.get(month_a.lower())
+        month_b_num = MONTHS.get(month_b.lower())
+        if not month_a_num or not month_b_num:
+            continue
+        try:
+            start = date(int(year_a), month_a_num, int(day_a))
+            end = date(int(year_b), month_b_num, int(day_b))
+            if end >= start:
+                add(match.group(0), start, end)
         except ValueError:
             continue
 
@@ -134,6 +157,8 @@ def extract_date_candidates(text: str, *, default_year: int | None = None) -> li
                 continue
 
         for match in re.finditer(r"\b(\d{1,2})\s+([A-Za-zÀ-ÿ]{3,12})\b", text, re.I):
+            if is_round_number(match):
+                continue
             day, month_name = match.groups()
             month_num = MONTHS.get(month_name.lower())
             if not month_num:

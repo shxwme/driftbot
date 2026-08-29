@@ -4,7 +4,7 @@ import unittest
 from datetime import datetime
 from unittest.mock import patch
 
-from discord_notify import LOCAL_TZ, format_change, format_live_alert, format_upcoming_digest
+from discord_notify import LOCAL_TZ, format_change_digest, format_live_alert, format_upcoming_digest
 from main import live_notification_key
 
 
@@ -67,10 +67,20 @@ class NotificationTests(unittest.TestCase):
             "date_candidates": [{"raw": "30.08.2026", "start": "2026-08-30", "end": "2026-08-30"}],
             "items": ["RND 1 30.08.2026"],
         }
-        payload = format_change(source, {}, after)
+        payload = format_change_digest([(source, after)])
         self.assertIn("embeds", payload)
         self.assertNotIn("Poprzedni odczyt", str(payload))
         self.assertIn("https://youtube.com/example", str(payload))
+
+    def test_multiple_calendar_changes_are_batched_into_one_embed(self) -> None:
+        candidates = [{"raw": "30.08.2026", "start": "2026-08-30", "end": "2026-08-30"}]
+        observations = [
+            ({"id": "one", "name": "One", "url": "https://one.example"}, {"date_candidates": candidates}),
+            ({"id": "two", "name": "Two", "url": "https://two.example"}, {"date_candidates": candidates}),
+        ]
+        payload = format_change_digest(observations)
+        self.assertEqual(len(payload["embeds"]), 1)
+        self.assertIn("zaktualizowano 2 kalendarze", payload["content"])
 
     @patch("discord_notify.warsaw_now", return_value=datetime(2026, 8, 29, 20, 0, tzinfo=LOCAL_TZ))
     def test_past_only_calendar_change_is_silent(self, _mock_now) -> None:
@@ -79,7 +89,7 @@ class NotificationTests(unittest.TestCase):
             "date_candidates": [{"raw": "01.01.2026", "start": "2026-01-01", "end": "2026-01-01"}],
             "items": [],
         }
-        self.assertIsNone(format_change(source, {}, after))
+        self.assertIsNone(format_change_digest([(source, after)]))
 
 
 if __name__ == "__main__":

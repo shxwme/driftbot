@@ -16,6 +16,15 @@ class DateParserTests(unittest.TestCase):
         self.assertIn(("2026-07-11", "2026-07-12"), ranges)
         self.assertIn(("2026-10-16", "2026-10-18"), ranges)
 
+    def test_round_number_is_not_treated_as_day_of_month(self) -> None:
+        candidates = extract_date_candidates(
+            "Upcoming Round 7 Sep 11, 2026 - Sep 12, 2026 PGE Narodowy, Poland",
+            default_year=2026,
+        )
+        ranges = {(item["start"], item["end"]) for item in candidates}
+        self.assertNotIn(("2026-09-07", "2026-09-07"), ranges)
+        self.assertIn(("2026-09-11", "2026-09-12"), ranges)
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -12,7 +12,7 @@ from typing import Any
 import requests
 import yaml
 
-from discord_notify import format_change, format_live_alert, format_upcoming_digest, send_webhook
+from discord_notify import format_change_digest, format_live_alert, format_upcoming_digest, send_webhook
 from parsers.generic import fetch_html, fetch_rss
 
 ROOT = Path(__file__).resolve().parent
@@ -139,6 +139,7 @@ def run(
     old_sources = state.setdefault("sources", {})
     errors: list[str] = []
     observations: list[tuple[dict[str, Any], Any]] = []
+    calendar_changes: list[tuple[dict[str, Any], Any]] = []
     live_notifications = state.setdefault("live_notifications", {})
     all_sources = load_sources()
     selected_sources = [
@@ -202,16 +203,12 @@ def run(
             previous = old_sources.get(source_id)
             notify_source_change = source.get("type") != "youtube"
             if previous is not None and previous != current and not no_notify and notify_source_change:
-                change_payload = format_change(source, previous, current)
-                if change_payload:
-                    send_webhook(change_payload, dry_run=dry_run)
+                calendar_changes.append((source, current))
                 changed += 1
             elif previous is not None and previous != current:
                 changed += 1
             elif previous is None and not bootstrap and not no_notify and notify_source_change:
-                change_payload = format_change(source, "brak", current)
-                if change_payload:
-                    send_webhook(change_payload, dry_run=dry_run)
+                calendar_changes.append((source, current))
                 changed += 1
             elif previous is None and not bootstrap:
                 changed += 1
@@ -222,6 +219,10 @@ def run(
     state["initialized"] = True
     if any(source.get("type") == "youtube" for source in active_sources):
         state["last_youtube_check_at"] = now.isoformat()
+    if calendar_changes and not no_notify:
+        change_payload = format_change_digest(calendar_changes)
+        if change_payload:
+            send_webhook(change_payload, dry_run=dry_run)
     if test_notification and not no_notify:
         summary = (
             "✅ DRIFT RADAR — test połączenia Discord\n"
