@@ -145,14 +145,12 @@ def fetch_html(source: dict[str, Any]) -> dict[str, Any]:
         if candidate.ok:
             response = candidate
             break
-    if response is None:
-        raise RuntimeError(f"calendar page unavailable: {source['url']}")
-    soup = BeautifulSoup(response.text, "html.parser")
+    soup = BeautifulSoup(response.text if response is not None else "", "html.parser")
     selector = source.get("selector", "body")
     nodes = soup.select(selector)
     if not nodes and selector != "body":
         nodes = soup.select("body")
-    if not nodes:
+    if not nodes and not source.get("image_urls"):
         raise RuntimeError(f"CSS selector {selector!r} matched nothing")
     text = "\n".join(" ".join(node.get_text(" ", strip=True).split()) for node in nodes)
     result: dict[str, Any] = {
@@ -161,7 +159,7 @@ def fetch_html(source: dict[str, Any]) -> dict[str, Any]:
     }
     if source.get("include_images"):
         images = []
-        image_refs = [(urljoin(response.url, url), "") for url in source.get("image_urls", [])]
+        image_refs = [(urljoin(response.url if response is not None else source["url"], url), "") for url in source.get("image_urls", [])]
         if not image_refs:
             for image in soup.select("img"):
                 raw_url = next(

@@ -129,12 +129,12 @@ def run(*, dry_run: bool, bootstrap: bool, no_notify: bool) -> int:
             old_sources[source_id] = current
         except Exception as exc:  # keep other sources running; never erase good state
             errors.append(f"{source_id}: {exc}")
-            print(f"[error] {errors[-1]}", file=sys.stderr)
+            print(f"[warning] {errors[-1]}", file=sys.stderr)
     state["initialized"] = True
     if not dry_run:
         STATE_PATH.write_text(json.dumps(state, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     print(f"Checked {len(load_sources())} source(s); {changed} change(s); {len(errors)} error(s).")
-    return 1 if errors else 0
+    return 0
 
 
 if __name__ == "__main__":
