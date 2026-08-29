@@ -38,6 +38,26 @@ def format_change(source: dict[str, Any], before: Any, after: Any) -> dict[str, 
     return payload
 
 
+def format_live_alert(source_name: str, video: dict[str, Any], minutes_until: int) -> dict[str, Any]:
+    title = video.get("title", "Zaplanowana transmisja")
+    start = datetime.fromisoformat(video["scheduled_start"].replace("Z", "+00:00")).astimezone()
+    live = video.get("live_status") == "live"
+    status = "🔴 LIVE!" if live else "⏰ START ZA CHWILĘ"
+    timing = "Transmisja właśnie trwa." if live else f"Start planowany za około {max(0, minutes_until)} min · {start:%H:%M} (Europe/Warsaw)"
+    return {
+        "content": f"{status} · {source_name} · {title}",
+        "embeds": [{
+            "title": f"{status} · {source_name}",
+            "description": timing,
+            "color": 0xE63946 if live else 0xFFB703,
+            "fields": [{"name": "Transmisja", "value": f"**{title}**\n📅 {start:%d.%m.%Y} · 🕒 {start:%H:%M}", "inline": False}],
+            "footer": {"text": "Drift Radar · automatyczny alert YouTube"},
+            "timestamp": datetime.now().astimezone().isoformat(),
+        }],
+        "components": [{"type": 1, "components": [{"type": 2, "style": 5, "label": "▶ Oglądaj LIVE", "url": f"https://www.youtube.com/watch?v={video['id']}"}]}],
+    }
+
+
 POLISH_MONTHS = [
     "stycznia", "lutego", "marca", "kwietnia", "maja", "czerwca",
     "lipca", "sierpnia", "września", "października", "listopada", "grudnia",
@@ -100,6 +120,7 @@ def _upcoming_events(observations: list[tuple[dict[str, Any], Any]]) -> list[dic
                         "watch_url": f"https://www.youtube.com/watch?v={video.get('id')}",
                         "calendar_url": source.get("url"),
                         "is_live": video.get("live_status") == "live",
+                        "scheduled_at": scheduled,
                     })
             continue
         if not isinstance(current, dict):
@@ -160,12 +181,15 @@ def format_upcoming_digest(observations: list[tuple[dict[str, Any], Any]]) -> di
                 urgency = "⏳ JUTRO"
             else:
                 urgency = f"⏱️ za {(event['start'] - date.today()).days} dni"
+            scheduled_time = ""
+            if event.get("scheduled_at"):
+                scheduled_time = f" · 🕒 {datetime.fromisoformat(event['scheduled_at'].replace('Z', '+00:00')).astimezone():%H:%M}"
             links = []
             if event["watch_url"]:
                 links.append(f"[▶ Oglądaj]({event['watch_url']})")
             if event["calendar_url"]:
                 links.append(f"[Kalendarz]({event['calendar_url']})")
-            lines.append(f"**{urgency} · {event['series']} · {event['label']}** ({when})" + (f"\n{' · '.join(links)}" if links else ""))
+            lines.append(f"**{urgency} · {event['series']} · {event['label']}** ({when}{scheduled_time})" + (f"\n{' · '.join(links)}" if links else ""))
             if event["watch_url"] and event["watch_url"] not in [button.get("url") for button in buttons]:
                 buttons.append({"type": 2, "style": 5, "label": "Oglądaj", "url": event["watch_url"]})
             if event["calendar_url"] and event["calendar_url"] not in [button.get("url") for button in buttons]:

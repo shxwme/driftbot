@@ -4,13 +4,14 @@ import argparse
 import json
 import os
 import sys
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Callable
 
 import requests
 import yaml
 
-from discord_notify import format_change, format_upcoming_digest, send_webhook
+from discord_notify import format_change, format_live_alert, format_upcoming_digest, send_webhook
 from parsers.generic import fetch_html, fetch_rss
 
 ROOT = Path(__file__).resolve().parent
@@ -108,6 +109,7 @@ def run(*, dry_run: bool, bootstrap: bool, no_notify: bool, test_notification: b
     old_sources = state.setdefault("sources", {})
     errors: list[str] = []
     observations: list[tuple[dict[str, Any], Any]] = []
+    live_notifications = state.setdefault("live_notifications", {})
     changed = 0
     for source in load_sources():
         if source.get("enabled", True) is False:
@@ -117,6 +119,25 @@ def run(*, dry_run: bool, bootstrap: bool, no_notify: bool, test_notification: b
         try:
             current = fetch(source)
             observations.append((source, current))
+            if source.get("type") == "youtube" and isinstance(current, list) and not no_notify:
+                now = datetime.now(timezone.utc)
+                for video in current:
+                    scheduled = video.get("scheduled_start") if isinstance(video, dict) else None
+                    if not scheduled or not video.get("id"):
+                        continue
+                    start = datetime.fromisoformat(scheduled.replace("Z", "+00:00"))
+                    minutes_until = round((start - now).total_seconds() / 60)
+                    is_live = video.get("live_status") == "live"
+                    if not is_live and not 0 <= minutes_until <= 10:
+                        continue
+                    notification_key = f"{source_id}:{video['id']}:{scheduled}"
+                    if notification_key in live_notifications:
+                        continue
+                    send_webhook(
+                        format_live_alert(source.get("name", source_id), video, minutes_until),
+                        dry_run=dry_run,
+                    )
+                    live_notifications[notification_key] = now.isoformat()
             previous = old_sources.get(source_id)
             if previous is not None and previous != current and not no_notify:
                 send_webhook(format_change(source, previous, current), dry_run=dry_run)
