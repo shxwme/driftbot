@@ -137,6 +137,7 @@ def run(*, dry_run: bool, bootstrap: bool, no_notify: bool, test_notification: b
             f"Sprawdzono źródeł: {len(load_sources())}; zmian: {changed}; błędów: {len(errors)}."
         )
         send_webhook(summary, dry_run=dry_run)
+        print("Discord test notification sent")
     if not dry_run:
         STATE_PATH.write_text(json.dumps(state, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     print(f"Checked {len(load_sources())} source(s); {changed} change(s); {len(errors)} error(s).")
