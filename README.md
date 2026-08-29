@@ -3,13 +3,22 @@
 Lokalny monitor kalendarzy i publikacji driftingowych. Źródła są ręcznie kuratorowane w
 `sources.yaml`, a poprzednie odczyty trafiają do `state.json`.
 
+## Co robi automatycznie
+
+- co 5 minut sprawdza zaplanowane i trwające transmisje YouTube;
+- około 10 minut przed startem wysyła czytelny alert Discord z bezpośrednim przyciskiem;
+- po wykryciu statusu live może wysłać osobny alert `LIVE TERAZ`;
+- pokazuje czas w `Europe/Warsaw`, względny czas Discorda oraz oznaczenie transmisji nocnych;
+- trzy razy dziennie skanuje oficjalne kalendarze, w tym plakaty obsługiwane przez OCR;
+- pomija zakończone transmisje i nie wysyła surowych dumpów danych.
+
 ## Uruchomienie
 
 ```powershell
 py -m venv .venv
 .\.venv\Scripts\Activate.ps1
 pip install -r requirements.txt
-py main.py --dry-run --bootstrap
+py main.py --dry-run --bootstrap --source-type all
 ```
 
 Sekrety:
@@ -35,3 +44,31 @@ Do przebazowania istniejącego stanu bez wysyłania alertów służy `--no-notif
 wykrywana, a workflow chmurowy automatycznie uruchamia Tesseract OCR i zapisuje odczytane daty.
 Lokalnie wymagany jest zainstalowany program `tesseract`; jeśli go brakuje, źródło kończy się błędem
 zamiast zapisać niepełne dane.
+
+## Tryby skanowania
+
+```powershell
+# Lekki polling transmisji
+py main.py --source-type youtube
+
+# Same strony kalendarzy i OCR
+py main.py --source-type calendar
+
+# Pełny przebieg
+py main.py --source-type all
+```
+
+Ręczny digest można wysłać opcją `--digest-notification`. Alerty live nie wymagają ręcznego
+uruchamiania — odpowiada za nie harmonogram GitHub Actions.
+
+## Jakość i bezpieczeństwo
+
+```powershell
+pip install -r requirements-dev.txt
+python -m unittest discover -s tests -p "test_*.py"
+python -m ruff check . --exclude gitmeta
+```
+
+Sekrety muszą pozostać wyłącznie w GitHub Actions Secrets lub zmiennych środowiskowych. Repozytorium
+nie zawiera klucza YouTube ani adresu webhooka. Dependabot raz w tygodniu sprawdza zależności Pythona
+i używane akcje GitHub.

@@ -1,34 +1,78 @@
 from __future__ import annotations
 
-import re
 import hashlib
-from io import BytesIO
+import re
 from datetime import date
+from io import BytesIO
 from typing import Any
 from urllib.parse import urljoin
 
 import feedparser
-from PIL import Image
 import pytesseract
 import requests
 from bs4 import BeautifulSoup
+from PIL import Image
 
 MONTHS = {
-    "jan": 1, "january": 1, "feb": 2, "february": 2, "mar": 3, "march": 3,
-    "apr": 4, "april": 4, "may": 5, "jun": 6, "june": 6, "jul": 7,
-    "july": 7, "aug": 8, "august": 8, "sep": 9, "sept": 9, "september": 9,
-    "oct": 10, "october": 10, "nov": 11, "november": 11, "dec": 12, "december": 12,
+    "jan": 1,
+    "january": 1,
+    "feb": 2,
+    "february": 2,
+    "mar": 3,
+    "march": 3,
+    "apr": 4,
+    "april": 4,
+    "may": 5,
+    "jun": 6,
+    "june": 6,
+    "jul": 7,
+    "july": 7,
+    "aug": 8,
+    "august": 8,
+    "sep": 9,
+    "sept": 9,
+    "september": 9,
+    "oct": 10,
+    "october": 10,
+    "nov": 11,
+    "november": 11,
+    "dec": 12,
+    "december": 12,
 }
-MONTHS.update({
-    "stycznia": 1, "lutego": 2, "marca": 3, "kwietnia": 4, "maja": 5, "czerwca": 6,
-    "lipca": 7, "sierpnia": 8, "września": 9, "października": 10, "listopada": 11, "grudnia": 12,
-    "janvier": 1, "février": 2, "fevrier": 2, "mars": 3, "avril": 4, "mai": 5,
-    "juin": 6, "juillet": 7, "août": 8, "aout": 8, "septembre": 9, "octobre": 10,
-    "novembre": 11, "décembre": 12, "decembre": 12,
-})
+MONTHS.update(
+    {
+        "stycznia": 1,
+        "lutego": 2,
+        "marca": 3,
+        "kwietnia": 4,
+        "maja": 5,
+        "czerwca": 6,
+        "lipca": 7,
+        "sierpnia": 8,
+        "września": 9,
+        "października": 10,
+        "listopada": 11,
+        "grudnia": 12,
+        "janvier": 1,
+        "février": 2,
+        "fevrier": 2,
+        "mars": 3,
+        "avril": 4,
+        "mai": 5,
+        "juin": 6,
+        "juillet": 7,
+        "août": 8,
+        "aout": 8,
+        "septembre": 9,
+        "octobre": 10,
+        "novembre": 11,
+        "décembre": 12,
+        "decembre": 12,
+    }
+)
 
 
-def extract_date_candidates(text: str) -> list[dict[str, str]]:
+def extract_date_candidates(text: str, *, default_year: int | None = None) -> list[dict[str, str]]:
     """Extract conservative, validated date candidates from rendered calendar text."""
     found: dict[tuple[str, str], dict[str, str]] = {}
 
@@ -69,7 +113,7 @@ def extract_date_candidates(text: str) -> list[dict[str, str]]:
             continue
 
     inferred_years = [int(value) for value in re.findall(r"\b(20\d{2})\b", text)]
-    inferred_year = inferred_years[0] if inferred_years else None
+    inferred_year = inferred_years[0] if inferred_years else default_year
     if inferred_year:
         for match in re.finditer(r"\b([A-Za-zÀ-ÿ]{3,12})\s+(\d{1,2})\s*[–-]\s*(\d{1,2})\b", text, re.I):
             month_name, day_a, day_b = match.groups()
@@ -77,7 +121,11 @@ def extract_date_candidates(text: str) -> list[dict[str, str]]:
             if not month_num:
                 continue
             try:
-                add(match.group(0), date(inferred_year, month_num, int(day_a)), date(inferred_year, month_num, int(day_b)))
+                add(
+                    match.group(0),
+                    date(inferred_year, month_num, int(day_a)),
+                    date(inferred_year, month_num, int(day_b)),
+                )
             except ValueError:
                 continue
 
@@ -157,59 +205,71 @@ def fetch_html(source: dict[str, Any]) -> dict[str, Any]:
         raise RuntimeError(f"CSS selector {selector!r} matched nothing")
     text = "\n".join(" ".join(node.get_text(" ", strip=True).split()) for node in nodes)
     result: dict[str, Any] = {
-        "date_candidates": extract_date_candidates(text),
+        "date_candidates": extract_date_candidates(text, default_year=source.get("calendar_year")),
         "items": [" ".join(node.get_text(" ", strip=True).split()) for node in nodes],
     }
     if source.get("include_images"):
         images = []
-        image_refs = [(urljoin(response.url if response is not None else source["url"], url), "") for url in source.get("image_urls", [])]
+        image_refs = [
+            (urljoin(response.url if response is not None else source["url"], url), "")
+            for url in source.get("image_urls", [])
+        ]
         if not image_refs:
             for image in soup.select("img"):
                 raw_url = next(
-                    (value for value in (image.get("src"), image.get("data-src"), image.get("data-lazy-src"))
-                     if value and value.startswith(("http://", "https://", "/"))),
+                    (
+                        value
+                        for value in (image.get("src"), image.get("data-src"), image.get("data-lazy-src"))
+                        if value and value.startswith(("http://", "https://", "/"))
+                    ),
                     None,
                 )
                 if raw_url:
                     image_url = urljoin(source["url"], raw_url)
                     image_refs.append((image_url, image.get("alt", "")))
         calendar_refs = [
-            (url, alt) for url, alt in image_refs
-            if re.search(r"calendar|calendrier|kalendar", f"{url} {alt}", re.I)
+            (url, alt) for url, alt in image_refs if re.search(r"calendar|calendrier|kalendar", f"{url} {alt}", re.I)
         ]
-        for image_url, alt in (calendar_refs or image_refs[:10]):
-                try:
-                    candidates = [image_url, *source.get("fallback_image_urls", [])]
-                    image_response = None
-                    for candidate_url in candidates:
-                        response = requests.get(
-                            candidate_url,
-                            headers={"User-Agent": "DriftRadar/1.0", "Referer": source["url"]},
-                            timeout=30,
-                        )
-                        if response.ok:
-                            image_response = response
-                            image_url = candidate_url
-                            break
-                    if image_response is None:
-                        raise RuntimeError("calendar image unavailable")
-                    if len(image_response.content) > 12 * 1024 * 1024:
-                        raise RuntimeError("calendar image is too large")
-                    image_bytes = image_response.content
-                    ocr_text = pytesseract.image_to_string(Image.open(BytesIO(image_bytes)), timeout=45)
-                    images.append({
+        for image_url, alt in calendar_refs or image_refs[:10]:
+            try:
+                candidates = [image_url, *source.get("fallback_image_urls", [])]
+                image_response = None
+                for candidate_url in candidates:
+                    response = requests.get(
+                        candidate_url,
+                        headers={"User-Agent": "DriftRadar/1.0", "Referer": source["url"]},
+                        timeout=30,
+                    )
+                    if response.ok:
+                        image_response = response
+                        image_url = candidate_url
+                        break
+                if image_response is None:
+                    raise RuntimeError("calendar image unavailable")
+                if len(image_response.content) > 12 * 1024 * 1024:
+                    raise RuntimeError("calendar image is too large")
+                image_bytes = image_response.content
+                ocr_text = pytesseract.image_to_string(Image.open(BytesIO(image_bytes)), timeout=45)
+                images.append(
+                    {
                         "url": image_url,
                         "alt": alt,
                         "sha256": hashlib.sha256(image_bytes).hexdigest(),
                         "ocr_text": " ".join(ocr_text.split()),
-                        "date_candidates": extract_date_candidates(ocr_text),
-                    })
-                except pytesseract.TesseractNotFoundError:
-                    result.setdefault("image_errors", []).append({"url": image_url, "error": "tesseract_missing"})
-                except (requests.RequestException, RuntimeError, OSError) as exc:
-                    result.setdefault("image_errors", []).append({"url": image_url, "error": str(exc)})
-                except Exception as exc:
-                    result.setdefault("image_errors", []).append({"url": image_url, "error": f"{type(exc).__name__}: {exc}"})
+                        "date_candidates": extract_date_candidates(
+                            ocr_text,
+                            default_year=source.get("calendar_year"),
+                        ),
+                    }
+                )
+            except pytesseract.TesseractNotFoundError:
+                result.setdefault("image_errors", []).append({"url": image_url, "error": "tesseract_missing"})
+            except (requests.RequestException, RuntimeError, OSError) as exc:
+                result.setdefault("image_errors", []).append({"url": image_url, "error": str(exc)})
+            except Exception as exc:
+                result.setdefault("image_errors", []).append(
+                    {"url": image_url, "error": f"{type(exc).__name__}: {exc}"}
+                )
         result["image_calendar"] = True
         result["image_urls"] = images
         ocr_dates = [candidate for image in images for candidate in image["date_candidates"]]
@@ -217,4 +277,7 @@ def fetch_html(source: dict[str, Any]) -> dict[str, Any]:
             {f"{item['start']}|{item['end']}": item for item in ocr_dates}.values(),
             key=lambda item: (item["start"], item["end"]),
         )
+        if source.get("ocr_required", True) and image_refs and not images:
+            details = "; ".join(error["error"] for error in result.get("image_errors", []))
+            raise RuntimeError(f"calendar OCR failed: {details or 'no image was processed'}")
     return result
