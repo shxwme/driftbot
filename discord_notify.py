@@ -16,23 +16,25 @@ def send_webhook(message: str | dict[str, Any], *, dry_run: bool = False) -> Non
     if not url:
         raise RuntimeError("DISCORD_WEBHOOK_URL is not configured")
     payload = message if isinstance(message, dict) else {"content": message}
-    response = requests.post(url, params={"wait": "true"}, json=payload, timeout=20)
+    response = requests.post(url, json=payload, timeout=20)
     response.raise_for_status()
     if isinstance(payload, dict) and "embeds" in payload:
-        accepted = response.json()
         print(
             "Discord accepted embed payload: "
-            f"embeds={len(accepted.get('embeds', []))}; "
-            f"components={len(accepted.get('components', []))}"
+            f"status={response.status_code}; embeds={len(payload.get('embeds', []))}; "
+            f"components={len(payload.get('components', []))}"
         )
 
 
-def format_change(source_name: str, before: Any, after: Any) -> str:
-    return (
-        f"🔔 DRIFT RADAR — zmiana: {source_name}\n"
-        f"Poprzedni odczyt: {before!r}\n"
-        f"Aktualny odczyt: {after!r}"
-    )
+def format_change(source_name: str, before: Any, after: Any) -> dict[str, Any]:
+    payload = format_upcoming_digest([({"name": source_name}, after)]) if isinstance(after, dict) else {
+        "embeds": [{"title": f"🔔 DRIFT RADAR · zmiana: {source_name}", "description": "Wykryto aktualizację źródła."}]
+    }
+    embed = payload["embeds"][0]
+    embed["title"] = f"🔔 DRIFT RADAR · aktualizacja: {source_name}"
+    embed["description"] = "Wykryto zmianę w źródle. Poniżej pokazano tylko aktualne, nadchodzące daty."
+    payload["content"] = f"🔔 Drift Radar: aktualizacja danych — {source_name}"
+    return payload
 
 
 POLISH_MONTHS = [
