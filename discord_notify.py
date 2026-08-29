@@ -26,8 +26,9 @@ def send_webhook(message: str | dict[str, Any], *, dry_run: bool = False) -> Non
         )
 
 
-def format_change(source_name: str, before: Any, after: Any) -> dict[str, Any]:
-    payload = format_upcoming_digest([({"name": source_name}, after)]) if isinstance(after, dict) else {
+def format_change(source: dict[str, Any], before: Any, after: Any) -> dict[str, Any]:
+    source_name = source.get("name", source.get("id", "źródło"))
+    payload = format_upcoming_digest([(source, after)]) if isinstance(after, dict) else {
         "embeds": [{"title": f"🔔 DRIFT RADAR · zmiana: {source_name}", "description": "Wykryto aktualizację źródła."}]
     }
     embed = payload["embeds"][0]
@@ -61,7 +62,8 @@ def _event_label(source: dict[str, Any], current: dict[str, Any], raw: str) -> s
                 re.I,
             )
             anchor = date_anchor.start() if date_anchor else text.lower().find(month.group(0).lower())
-            label = min(nearby, key=lambda marker: abs(marker.start() - anchor)).group(0)
+            preceding = [marker for marker in nearby if marker.start() <= anchor]
+            label = (preceding[-1] if preceding else min(nearby, key=lambda marker: abs(marker.start() - anchor))).group(0)
             normalized = re.sub(r"^RND\s*|^RD\s*|^Round\s*", "", label, flags=re.I)
             if label.lower().startswith("special"):
                 return "Event specjalny"
@@ -77,6 +79,29 @@ def _upcoming_events(observations: list[tuple[dict[str, Any], Any]]) -> list[dic
     today = date.today()
     events: list[dict[str, Any]] = []
     for source, current in observations:
+        if isinstance(current, list):
+            for video in current:
+                if not isinstance(video, dict):
+                    continue
+                scheduled = video.get("scheduled_start") or (datetime.now().astimezone().isoformat() if video.get("live_status") == "live" else None)
+                if not scheduled:
+                    continue
+                try:
+                    video_day = datetime.fromisoformat(scheduled.replace("Z", "+00:00")).date()
+                except ValueError:
+                    continue
+                if video_day >= today:
+                    events.append({
+                        "start": video_day,
+                        "end": video_day,
+                        "raw": video.get("title", ""),
+                        "series": source.get("name", source.get("id", "Drift")),
+                        "label": video.get("title", "Transmisja YouTube"),
+                        "watch_url": f"https://www.youtube.com/watch?v={video.get('id')}",
+                        "calendar_url": source.get("url"),
+                        "is_live": video.get("live_status") == "live",
+                    })
+            continue
         if not isinstance(current, dict):
             continue
         candidates = current.get("date_candidates") or current.get("ocr_date_candidates") or []
@@ -110,6 +135,7 @@ def _upcoming_events(observations: list[tuple[dict[str, Any], Any]]) -> list[dic
                 "label": _event_label(source, current, item["raw"]),
                 "watch_url": source.get("watch_url"),
                 "calendar_url": source.get("url"),
+                "is_live": False,
             })
     return sorted(events, key=lambda item: (item["start"], item["series"]))
 
@@ -126,12 +152,20 @@ def format_upcoming_digest(observations: list[tuple[dict[str, Any], Any]]) -> di
         lines = []
         for event in day_events:
             when = f"{event['start'].day} {month}" if event["start"] == event["end"] else f"{event['start'].day}–{event['end'].day} {month}"
+            if event.get("is_live"):
+                urgency = "🔴 LIVE!"
+            elif event["start"] <= date.today() <= event["end"]:
+                urgency = "🔥 TO DZIŚ!"
+            elif (event["start"] - date.today()).days == 1:
+                urgency = "⏳ JUTRO"
+            else:
+                urgency = f"⏱️ za {(event['start'] - date.today()).days} dni"
             links = []
             if event["watch_url"]:
                 links.append(f"[▶ Oglądaj]({event['watch_url']})")
             if event["calendar_url"]:
                 links.append(f"[Kalendarz]({event['calendar_url']})")
-            lines.append(f"**{event['series']} · {event['label']}** ({when})" + (f"\n{' · '.join(links)}" if links else ""))
+            lines.append(f"**{urgency} · {event['series']} · {event['label']}** ({when})" + (f"\n{' · '.join(links)}" if links else ""))
             if event["watch_url"] and event["watch_url"] not in [button.get("url") for button in buttons]:
                 buttons.append({"type": 2, "style": 5, "label": "Oglądaj", "url": event["watch_url"]})
             if event["calendar_url"] and event["calendar_url"] not in [button.get("url") for button in buttons]:

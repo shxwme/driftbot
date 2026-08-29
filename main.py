@@ -10,7 +10,7 @@ from typing import Any, Callable
 import requests
 import yaml
 
-from discord_notify import format_change, send_webhook
+from discord_notify import format_change, format_upcoming_digest, send_webhook
 from parsers.generic import fetch_html, fetch_rss
 
 ROOT = Path(__file__).resolve().parent
@@ -107,7 +107,7 @@ def run(*, dry_run: bool, bootstrap: bool, no_notify: bool, test_notification: b
     state = load_json(STATE_PATH)
     old_sources = state.setdefault("sources", {})
     errors: list[str] = []
-    observations: list[tuple[str, Any]] = []
+    observations: list[tuple[dict[str, Any], Any]] = []
     changed = 0
     for source in load_sources():
         if source.get("enabled", True) is False:
@@ -116,15 +116,15 @@ def run(*, dry_run: bool, bootstrap: bool, no_notify: bool, test_notification: b
         source_id = source["id"]
         try:
             current = fetch(source)
-            observations.append((source.get("name", source_id), current))
+            observations.append((source, current))
             previous = old_sources.get(source_id)
             if previous is not None and previous != current and not no_notify:
-                send_webhook(format_change(source.get("name", source_id), previous, current), dry_run=dry_run)
+                send_webhook(format_change(source, previous, current), dry_run=dry_run)
                 changed += 1
             elif previous is not None and previous != current:
                 changed += 1
             elif previous is None and not bootstrap and not no_notify:
-                send_webhook(format_change(source.get("name", source_id), "brak", current), dry_run=dry_run)
+                send_webhook(format_change(source, "brak", current), dry_run=dry_run)
                 changed += 1
             elif previous is None and not bootstrap:
                 changed += 1
@@ -141,17 +141,7 @@ def run(*, dry_run: bool, bootstrap: bool, no_notify: bool, test_notification: b
         send_webhook(summary, dry_run=dry_run)
         print("Discord test notification sent")
     if digest_notification and not no_notify:
-        lines = ["📅 DRIFT RADAR — aktualny digest danych"]
-        for name, current in observations:
-            if not isinstance(current, dict):
-                continue
-            candidates = current.get("date_candidates") or current.get("ocr_date_candidates") or []
-            dates = [f"{item.get('start')}" if item.get("start") == item.get("end") else f"{item.get('start')}–{item.get('end')}" for item in candidates if isinstance(item, dict)]
-            if dates:
-                lines.append(f"• {name}: {', '.join(dates[:8])}")
-        if len(lines) == 1:
-            lines.append("Brak ustrukturyzowanych dat w aktualnym odczycie.")
-        send_webhook("\n".join(lines)[:1900], dry_run=dry_run)
+        send_webhook(format_upcoming_digest(observations), dry_run=dry_run)
         print("Discord data digest sent")
     if not dry_run:
         STATE_PATH.write_text(json.dumps(state, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
