@@ -103,10 +103,11 @@ def fetch_youtube(source: dict[str, Any]) -> list[dict[str, str]]:
     ]
 
 
-def run(*, dry_run: bool, bootstrap: bool, no_notify: bool, test_notification: bool) -> int:
+def run(*, dry_run: bool, bootstrap: bool, no_notify: bool, test_notification: bool, digest_notification: bool) -> int:
     state = load_json(STATE_PATH)
     old_sources = state.setdefault("sources", {})
     errors: list[str] = []
+    observations: list[tuple[str, Any]] = []
     changed = 0
     for source in load_sources():
         if source.get("enabled", True) is False:
@@ -115,6 +116,7 @@ def run(*, dry_run: bool, bootstrap: bool, no_notify: bool, test_notification: b
         source_id = source["id"]
         try:
             current = fetch(source)
+            observations.append((source.get("name", source_id), current))
             previous = old_sources.get(source_id)
             if previous is not None and previous != current and not no_notify:
                 send_webhook(format_change(source.get("name", source_id), previous, current), dry_run=dry_run)
@@ -138,6 +140,19 @@ def run(*, dry_run: bool, bootstrap: bool, no_notify: bool, test_notification: b
         )
         send_webhook(summary, dry_run=dry_run)
         print("Discord test notification sent")
+    if digest_notification and not no_notify:
+        lines = ["📅 DRIFT RADAR — aktualny digest danych"]
+        for name, current in observations:
+            if not isinstance(current, dict):
+                continue
+            candidates = current.get("date_candidates") or current.get("ocr_date_candidates") or []
+            dates = [f"{item.get('start')}" if item.get("start") == item.get("end") else f"{item.get('start')}–{item.get('end')}" for item in candidates if isinstance(item, dict)]
+            if dates:
+                lines.append(f"• {name}: {', '.join(dates[:8])}")
+        if len(lines) == 1:
+            lines.append("Brak ustrukturyzowanych dat w aktualnym odczycie.")
+        send_webhook("\n".join(lines)[:1900], dry_run=dry_run)
+        print("Discord data digest sent")
     if not dry_run:
         STATE_PATH.write_text(json.dumps(state, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     print(f"Checked {len(load_sources())} source(s); {changed} change(s); {len(errors)} error(s).")
@@ -150,6 +165,7 @@ if __name__ == "__main__":
     parser.add_argument("--bootstrap", action="store_true", help="seed missing sources without notifications")
     parser.add_argument("--no-notify", action="store_true", help="write state but suppress Discord notifications")
     parser.add_argument("--test-notification", action="store_true", help="send one Discord connectivity/status message")
+    parser.add_argument("--digest-notification", action="store_true", help="send one digest of currently read dates")
     args = parser.parse_args()
     raise SystemExit(
         run(
@@ -157,5 +173,6 @@ if __name__ == "__main__":
             bootstrap=args.bootstrap,
             no_notify=args.no_notify,
             test_notification=args.test_notification,
+            digest_notification=args.digest_notification,
         )
     )
