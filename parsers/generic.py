@@ -207,6 +207,8 @@ def fetch_html(source: dict[str, Any]) -> dict[str, Any]:
                     result.setdefault("image_errors", []).append({"url": image_url, "error": "tesseract_missing"})
                 except (requests.RequestException, RuntimeError, OSError) as exc:
                     result.setdefault("image_errors", []).append({"url": image_url, "error": str(exc)})
+                except Exception as exc:
+                    result.setdefault("image_errors", []).append({"url": image_url, "error": f"{type(exc).__name__}: {exc}"})
         result["image_calendar"] = True
         result["image_urls"] = images
         ocr_dates = [candidate for image in images for candidate in image["date_candidates"]]
