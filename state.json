@@ -100,6 +100,60 @@
       "date_candidates": [],
       "items": [
         "Eventy 2026"
+      ],
+      "image_calendar": true,
+      "image_urls": [
+        {
+          "url": "https://www.polishdriftshow.pl/wp-content/uploads/2026/02/torun-end-738x1024.jpg",
+          "alt": "",
+          "sha256": "3b6f5254145ba5d950e592121fd1b476e686a31930c6cd375b6b4e8ff5d3a5fd",
+          "ocr_text": "8-10.05.2026 MOTOPARK TORUN awodow Bilety : sprzedaz w dniu z",
+          "date_candidates": [
+            {
+              "raw": "8-10.05.2026",
+              "start": "2026-05-08",
+              "end": "2026-05-10"
+            },
+            {
+              "raw": "10.05.2026",
+              "start": "2026-05-10",
+              "end": "2026-05-10"
+            }
+          ]
+        },
+        {
+          "url": "https://www.polishdriftshow.pl/wp-content/uploads/2026/02/koszalin-end-738x1024.jpg",
+          "alt": "",
+          "sha256": "29c9946d40300f33f51a1039e8badbca832d995b178099deae95f9b898fb8c05",
+          "ocr_text": "",
+          "date_candidates": []
+        },
+        {
+          "url": "https://www.polishdriftshow.pl/wp-content/uploads/2026/07/plakat-gotowy-742x1024.png",
+          "alt": "",
+          "sha256": "7967bc1b913453d6d83ab45f331e320a7abd7d27d947fe6a4872453556bca569",
+          "ocr_text": "SIENNA - CZARNA-GORA se@uortex @@EZZE™ Pibaro Z a Otronsmtaje Wve EURO UMA RENT ® oneTHUS ‘CLOP = DPIFT| G Xenonzone “id amie. 3 Seem (aires)",
+          "date_candidates": []
+        },
+        {
+          "url": "https://www.polishdriftshow.pl/wp-content/uploads/2026/04/5837-738x1024.jpg",
+          "alt": "",
+          "sha256": "757fd0fa6a311233c9379f138733dea529351a53a69ebd7d9dc528cac1225d0e",
+          "ocr_text": "“6 IK ~ e a # ey",
+          "date_candidates": []
+        }
+      ],
+      "ocr_date_candidates": [
+        {
+          "raw": "8-10.05.2026",
+          "start": "2026-05-08",
+          "end": "2026-05-10"
+        },
+        {
+          "raw": "10.05.2026",
+          "start": "2026-05-10",
+          "end": "2026-05-10"
+        }
       ]
     },
     "drift-masters-calendar": {
@@ -960,5 +1014,6 @@
       }
     ]
   },
-  "live_notifications": {}
+  "live_notifications": {},
+  "last_youtube_check_at": "2026-08-29T18:01:47.459390+00:00"
 }
