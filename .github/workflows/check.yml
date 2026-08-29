@@ -2,6 +2,12 @@ name: Drift Radar check
 
 on:
   workflow_dispatch:
+    inputs:
+      test_notification:
+        description: "Send one Discord connectivity/status message"
+        required: false
+        type: boolean
+        default: false
   schedule:
     - cron: "0 6,14,20 * * *"
 
@@ -25,8 +31,14 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y tesseract-ocr tesseract-ocr-eng tesseract-ocr-pol tesseract-ocr-fra
       - run: pip install -r requirements.txt
-      - run: python main.py --bootstrap
-        continue-on-error: true
+      - name: Run monitor
+        shell: bash
+        run: |
+          args=""
+          if [[ "${{ github.event.inputs.test_notification }}" == "true" ]]; then
+            args="--test-notification"
+          fi
+          python main.py $args
         env:
           DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
           YOUTUBE_API_KEY: ${{ secrets.YOUTUBE_API_KEY }}

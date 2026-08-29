@@ -103,7 +103,7 @@ def fetch_youtube(source: dict[str, Any]) -> list[dict[str, str]]:
     ]
 
 
-def run(*, dry_run: bool, bootstrap: bool, no_notify: bool) -> int:
+def run(*, dry_run: bool, bootstrap: bool, no_notify: bool, test_notification: bool) -> int:
     state = load_json(STATE_PATH)
     old_sources = state.setdefault("sources", {})
     errors: list[str] = []
@@ -131,6 +131,12 @@ def run(*, dry_run: bool, bootstrap: bool, no_notify: bool) -> int:
             errors.append(f"{source_id}: {exc}")
             print(f"[warning] {source_id}: {type(exc).__name__}: {exc}", file=sys.stderr)
     state["initialized"] = True
+    if test_notification and not no_notify:
+        summary = (
+            "✅ DRIFT RADAR — test połączenia Discord\n"
+            f"Sprawdzono źródeł: {len(load_sources())}; zmian: {changed}; błędów: {len(errors)}."
+        )
+        send_webhook(summary, dry_run=dry_run)
     if not dry_run:
         STATE_PATH.write_text(json.dumps(state, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     print(f"Checked {len(load_sources())} source(s); {changed} change(s); {len(errors)} error(s).")
@@ -142,5 +148,13 @@ if __name__ == "__main__":
     parser.add_argument("--dry-run", action="store_true", help="do not write state or send Discord messages")
     parser.add_argument("--bootstrap", action="store_true", help="seed missing sources without notifications")
     parser.add_argument("--no-notify", action="store_true", help="write state but suppress Discord notifications")
+    parser.add_argument("--test-notification", action="store_true", help="send one Discord connectivity/status message")
     args = parser.parse_args()
-    raise SystemExit(run(dry_run=args.dry_run, bootstrap=args.bootstrap, no_notify=args.no_notify))
+    raise SystemExit(
+        run(
+            dry_run=args.dry_run,
+            bootstrap=args.bootstrap,
+            no_notify=args.no_notify,
+            test_notification=args.test_notification,
+        )
+    )
