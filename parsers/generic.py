@@ -155,16 +155,17 @@ def fetch_html(source: dict[str, Any]) -> dict[str, Any]:
     }
     if source.get("include_images"):
         images = []
-        image_refs = []
-        for image in soup.select("img"):
-            raw_url = next(
-                (value for value in (image.get("src"), image.get("data-src"), image.get("data-lazy-src"))
-                 if value and value.startswith(("http://", "https://", "/"))),
-                None,
-            )
-            if raw_url:
-                image_url = urljoin(source["url"], raw_url)
-                image_refs.append((image_url, image.get("alt", "")))
+        image_refs = [(urljoin(source["url"], url), "") for url in source.get("image_urls", [])]
+        if not image_refs:
+            for image in soup.select("img"):
+                raw_url = next(
+                    (value for value in (image.get("src"), image.get("data-src"), image.get("data-lazy-src"))
+                     if value and value.startswith(("http://", "https://", "/"))),
+                    None,
+                )
+                if raw_url:
+                    image_url = urljoin(source["url"], raw_url)
+                    image_refs.append((image_url, image.get("alt", "")))
         calendar_refs = [
             (url, alt) for url, alt in image_refs
             if re.search(r"calendar|calendrier|kalendar", f"{url} {alt}", re.I)
