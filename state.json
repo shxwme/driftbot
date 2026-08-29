@@ -228,42 +228,14 @@
       "image_calendar": true,
       "image_urls": [
         {
-          "url": "data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%201000%201000%22%3E%3C%2Fsvg%3E",
-          "alt": "powerby2026"
-        },
-        {
-          "url": "data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%20300%20145%22%3E%3C%2Fsvg%3E",
-          "alt": "tele3"
-        },
-        {
-          "url": "data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%20300%20145%22%3E%3C%2Fsvg%3E",
-          "alt": "insta2"
-        },
-        {
-          "url": "data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%20300%20145%22%3E%3C%2Fsvg%3E",
-          "alt": "ytlive2"
-        },
-        {
-          "url": "data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%201800%20506%22%3E%3C%2Fsvg%3E",
-          "alt": ""
-        },
-        {
-          "url": "data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw==",
-          "alt": ""
-        },
-        {
-          "url": "data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw==",
-          "alt": ""
-        },
-        {
-          "url": "data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%201%201%22%3E%3C%2Fsvg%3E",
-          "alt": ""
-        },
-        {
-          "url": "data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%201200%201500%22%3E%3C%2Fsvg%3E",
-          "alt": "calendar2026tr"
+          "url": "https://driftkings-com.b-cdn.net/wp-content/uploads/2026/07/calendar2026tr.webp",
+          "alt": "",
+          "sha256": "76835e436e6c5d8843bc3e3927e4936725dfeafc65c96a8bfb9e39f78e9c3c65",
+          "ocr_text": "aon , RGR DRIFTSHOP Ree Ny, zz NOSV3S Bae oC coz /)} a fe as Vee 2 i MXTR _ m= mi 24-26 APRIL NURBURGRING GERMANY Bg ze ANNEAU DU RHIN B FRANCE 11-12 JULY MARIAPOCS, HUNGARY ~ 28-29 AUGUST TRACKWOOD HUNGARY ral —_— ABS NURBURGRING ~~ HUNAKAMO TRACKWOOD 23 OCTOBER SERRES RACING CIRCUIT = GREECE pro2yqucen Fina 16-18 OCTOBER. ACHNA SPEEDWAY cyYyPp see ~ i FINAL~—~ ip, . < os 9-10 MAY PLOVDIV EXP BUL ARIA BALKAN CUP 4 OCTOBER SERRES RACING CIRCUIT | NATIONS CUP 14-15 FEBRUARY SERRES CIRCUIT WINTER TRAINING — *",
+          "date_candidates": []
         }
-      ]
+      ],
+      "ocr_date_candidates": []
     },
     "czech-drift-series-calendar": {
       "date_candidates": [
