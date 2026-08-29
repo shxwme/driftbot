@@ -137,11 +137,14 @@ def fetch_rss(source: dict[str, Any]) -> list[dict[str, str]]:
 def fetch_html(source: dict[str, Any]) -> dict[str, Any]:
     response = None
     for page_url in [source["url"], *source.get("fallback_urls", [])]:
-        candidate = requests.get(
-            page_url,
-            headers={"User-Agent": "DriftRadar/1.0 (+personal monitor)"},
-            timeout=30,
-        )
+        try:
+            candidate = requests.get(
+                page_url,
+                headers={"User-Agent": "DriftRadar/1.0 (+personal monitor)"},
+                timeout=30,
+            )
+        except requests.RequestException:
+            continue
         if candidate.ok:
             response = candidate
             break
