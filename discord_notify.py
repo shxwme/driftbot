@@ -131,6 +131,7 @@ def format_upcoming_digest(observations: list[tuple[dict[str, Any], Any]]) -> di
     if not fields:
         fields.append({"name": "Brak nadchodzących wydarzeń", "value": "Nie znaleziono przyszłych dat w aktualnych źródłach.", "inline": False})
     payload: dict[str, Any] = {
+        "content": "🏁 DRIFT RADAR · najbliższe wydarzenia — szczegóły i przyciski są w karcie poniżej.",
         "embeds": [{
             "title": "🏁 DRIFT RADAR · Najbliższe wydarzenia",
             "description": "Automatyczny przegląd przyszłych rund i eventów. Daty minione są pomijane.",
