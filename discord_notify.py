@@ -4,8 +4,11 @@ import os
 import re
 from datetime import date, datetime, timedelta
 from typing import Any
+from zoneinfo import ZoneInfo
 
 import requests
+
+LOCAL_TZ = ZoneInfo("Europe/Warsaw")
 
 
 def send_webhook(message: str | dict[str, Any], *, dry_run: bool = False) -> None:
@@ -40,17 +43,18 @@ def format_change(source: dict[str, Any], before: Any, after: Any) -> dict[str, 
 
 def format_live_alert(source_name: str, video: dict[str, Any], minutes_until: int) -> dict[str, Any]:
     title = video.get("title", "Zaplanowana transmisja")
-    start = datetime.fromisoformat(video["scheduled_start"].replace("Z", "+00:00")).astimezone()
+    start = datetime.fromisoformat(video["scheduled_start"].replace("Z", "+00:00")).astimezone(LOCAL_TZ)
     live = video.get("live_status") == "live"
     status = "🔴 LIVE!" if live else "⏰ START ZA CHWILĘ"
-    timing = "Transmisja właśnie trwa." if live else f"Start planowany za około {max(0, minutes_until)} min · {start:%H:%M} (Europe/Warsaw)"
+    night = f"🌙 NOC Z {(start.date() - timedelta(days=1)):%d.%m} NA {start:%d.%m}!" if start.hour < 6 else ""
+    timing = "Transmisja właśnie trwa." if live else f"Start planowany za około {max(0, minutes_until)} min · {start:%d.%m.%Y %H:%M} (Europe/Warsaw)"
     return {
         "content": f"{status} · {source_name} · {title}",
         "embeds": [{
             "title": f"{status} · {source_name}",
             "description": timing,
             "color": 0xE63946 if live else 0xFFB703,
-            "fields": [{"name": "Transmisja", "value": f"**{title}**\n📅 {start:%d.%m.%Y} · 🕒 {start:%H:%M}", "inline": False}],
+            "fields": [{"name": "Transmisja", "value": f"**{title}**\n📅 {start:%d.%m.%Y} · 🕒 {start:%H:%M}" + (f"\n{night}" if night else ""), "inline": False}],
             "footer": {"text": "Drift Radar · automatyczny alert YouTube"},
             "timestamp": datetime.now().astimezone().isoformat(),
         }],
@@ -107,7 +111,8 @@ def _upcoming_events(observations: list[tuple[dict[str, Any], Any]]) -> list[dic
                 if not scheduled:
                     continue
                 try:
-                    video_day = datetime.fromisoformat(scheduled.replace("Z", "+00:00")).date()
+                    video_start = datetime.fromisoformat(scheduled.replace("Z", "+00:00")).astimezone(LOCAL_TZ)
+                    video_day = video_start.date()
                 except ValueError:
                     continue
                 if video_day >= today:
@@ -183,7 +188,10 @@ def format_upcoming_digest(observations: list[tuple[dict[str, Any], Any]]) -> di
                 urgency = f"⏱️ za {(event['start'] - date.today()).days} dni"
             scheduled_time = ""
             if event.get("scheduled_at"):
-                scheduled_time = f" · 🕒 {datetime.fromisoformat(event['scheduled_at'].replace('Z', '+00:00')).astimezone():%H:%M}"
+                local_start = datetime.fromisoformat(event['scheduled_at'].replace('Z', '+00:00')).astimezone(LOCAL_TZ)
+                scheduled_time = f" · 🕒 {local_start:%H:%M}"
+                if local_start.hour < 6:
+                    scheduled_time += f" · 🌙 noc z {(local_start.date() - timedelta(days=1)):%d.%m} na {local_start:%d.%m}"
             links = []
             if event["watch_url"]:
                 links.append(f"[▶ Oglądaj]({event['watch_url']})")
