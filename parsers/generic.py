@@ -176,6 +176,10 @@ def fetch_html(source: dict[str, Any]) -> dict[str, Any]:
                     headers={"User-Agent": "DriftRadar/1.0", "Referer": source["url"]},
                     timeout=30,
                 )
+                if image_response.status_code in (400, 403):
+                    image_response = requests.get(
+                        image_url, headers={"User-Agent": "DriftRadar/1.0"}, timeout=30
+                    )
                 image_response.raise_for_status()
                 if len(image_response.content) > 12 * 1024 * 1024:
                     raise RuntimeError(f"calendar image is too large: {image_url}")
