@@ -16,8 +16,15 @@ def send_webhook(message: str | dict[str, Any], *, dry_run: bool = False) -> Non
     if not url:
         raise RuntimeError("DISCORD_WEBHOOK_URL is not configured")
     payload = message if isinstance(message, dict) else {"content": message}
-    response = requests.post(url, json=payload, timeout=20)
+    response = requests.post(url, params={"wait": "true"}, json=payload, timeout=20)
     response.raise_for_status()
+    if isinstance(payload, dict) and "embeds" in payload:
+        accepted = response.json()
+        print(
+            "Discord accepted embed payload: "
+            f"embeds={len(accepted.get('embeds', []))}; "
+            f"components={len(accepted.get('components', []))}"
+        )
 
 
 def format_change(source_name: str, before: Any, after: Any) -> str:
@@ -131,7 +138,7 @@ def format_upcoming_digest(observations: list[tuple[dict[str, Any], Any]]) -> di
     if not fields:
         fields.append({"name": "Brak nadchodzących wydarzeń", "value": "Nie znaleziono przyszłych dat w aktualnych źródłach.", "inline": False})
     payload: dict[str, Any] = {
-        "content": "🏁 DRIFT RADAR · najbliższe wydarzenia — szczegóły i przyciski są w karcie poniżej.",
+        "content": "🏁 DRIFT RADAR v3 · najbliższe wydarzenia — szczegóły i przyciski są w karcie poniżej.",
         "embeds": [{
             "title": "🏁 DRIFT RADAR · Najbliższe wydarzenia",
             "description": "Automatyczny przegląd przyszłych rund i eventów. Daty minione są pomijane.",
