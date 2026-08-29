@@ -154,7 +154,13 @@
           "start": "2026-05-10",
           "end": "2026-05-10"
         }
-      ]
+      ],
+      "ocr_verification": {
+        "status": "ocr_only",
+        "matched_ranges": 0,
+        "text_ranges": 0,
+        "ocr_ranges": 2
+      }
     },
     "drift-masters-calendar": {
       "date_candidates": [
@@ -179,6 +185,11 @@
           "end": "2026-05-17"
         },
         {
+          "raw": "3 Jun",
+          "start": "2026-06-03",
+          "end": "2026-06-03"
+        },
+        {
           "raw": "Jun 13, 2026",
           "start": "2026-06-13",
           "end": "2026-06-13"
@@ -187,6 +198,16 @@
           "raw": "Jun 14, 2026",
           "start": "2026-06-14",
           "end": "2026-06-14"
+        },
+        {
+          "raw": "4 Jul",
+          "start": "2026-07-04",
+          "end": "2026-07-04"
+        },
+        {
+          "raw": "5 Jul",
+          "start": "2026-07-05",
+          "end": "2026-07-05"
         },
         {
           "raw": "Jul 11, 2026",
@@ -209,6 +230,11 @@
           "end": "2026-07-25"
         },
         {
+          "raw": "6 Aug",
+          "start": "2026-08-06",
+          "end": "2026-08-06"
+        },
+        {
           "raw": "Aug 14, 2026",
           "start": "2026-08-14",
           "end": "2026-08-14"
@@ -217,6 +243,11 @@
           "raw": "Aug 16, 2026",
           "start": "2026-08-16",
           "end": "2026-08-16"
+        },
+        {
+          "raw": "7 Sep",
+          "start": "2026-09-07",
+          "end": "2026-09-07"
         },
         {
           "raw": "Sep 11, 2026",
@@ -286,10 +317,158 @@
           "alt": "",
           "sha256": "76835e436e6c5d8843bc3e3927e4936725dfeafc65c96a8bfb9e39f78e9c3c65",
           "ocr_text": "aon , RGR DRIFTSHOP Ree Ny, zz NOSV3S Bae oC coz /)} a fe as Vee 2 i MXTR _ m= mi 24-26 APRIL NURBURGRING GERMANY Bg ze ANNEAU DU RHIN B FRANCE 11-12 JULY MARIAPOCS, HUNGARY ~ 28-29 AUGUST TRACKWOOD HUNGARY ral —_— ABS NURBURGRING ~~ HUNAKAMO TRACKWOOD 23 OCTOBER SERRES RACING CIRCUIT = GREECE pro2yqucen Fina 16-18 OCTOBER. ACHNA SPEEDWAY cyYyPp see ~ i FINAL~—~ ip, . < os 9-10 MAY PLOVDIV EXP BUL ARIA BALKAN CUP 4 OCTOBER SERRES RACING CIRCUIT | NATIONS CUP 14-15 FEBRUARY SERRES CIRCUIT WINTER TRAINING — *",
-          "date_candidates": []
+          "date_candidates": [
+            {
+              "raw": "14-15 FEBRUARY",
+              "start": "2026-02-14",
+              "end": "2026-02-15"
+            },
+            {
+              "raw": "15 FEBRUARY",
+              "start": "2026-02-15",
+              "end": "2026-02-15"
+            },
+            {
+              "raw": "24-26 APRIL",
+              "start": "2026-04-24",
+              "end": "2026-04-26"
+            },
+            {
+              "raw": "26 APRIL",
+              "start": "2026-04-26",
+              "end": "2026-04-26"
+            },
+            {
+              "raw": "9-10 MAY",
+              "start": "2026-05-09",
+              "end": "2026-05-10"
+            },
+            {
+              "raw": "10 MAY",
+              "start": "2026-05-10",
+              "end": "2026-05-10"
+            },
+            {
+              "raw": "11-12 JULY",
+              "start": "2026-07-11",
+              "end": "2026-07-12"
+            },
+            {
+              "raw": "12 JULY",
+              "start": "2026-07-12",
+              "end": "2026-07-12"
+            },
+            {
+              "raw": "28-29 AUGUST",
+              "start": "2026-08-28",
+              "end": "2026-08-29"
+            },
+            {
+              "raw": "29 AUGUST",
+              "start": "2026-08-29",
+              "end": "2026-08-29"
+            },
+            {
+              "raw": "4 OCTOBER",
+              "start": "2026-10-04",
+              "end": "2026-10-04"
+            },
+            {
+              "raw": "16-18 OCTOBER",
+              "start": "2026-10-16",
+              "end": "2026-10-18"
+            },
+            {
+              "raw": "18 OCTOBER",
+              "start": "2026-10-18",
+              "end": "2026-10-18"
+            },
+            {
+              "raw": "23 OCTOBER",
+              "start": "2026-10-23",
+              "end": "2026-10-23"
+            }
+          ]
         }
       ],
-      "ocr_date_candidates": []
+      "ocr_date_candidates": [
+        {
+          "raw": "14-15 FEBRUARY",
+          "start": "2026-02-14",
+          "end": "2026-02-15"
+        },
+        {
+          "raw": "15 FEBRUARY",
+          "start": "2026-02-15",
+          "end": "2026-02-15"
+        },
+        {
+          "raw": "24-26 APRIL",
+          "start": "2026-04-24",
+          "end": "2026-04-26"
+        },
+        {
+          "raw": "26 APRIL",
+          "start": "2026-04-26",
+          "end": "2026-04-26"
+        },
+        {
+          "raw": "9-10 MAY",
+          "start": "2026-05-09",
+          "end": "2026-05-10"
+        },
+        {
+          "raw": "10 MAY",
+          "start": "2026-05-10",
+          "end": "2026-05-10"
+        },
+        {
+          "raw": "11-12 JULY",
+          "start": "2026-07-11",
+          "end": "2026-07-12"
+        },
+        {
+          "raw": "12 JULY",
+          "start": "2026-07-12",
+          "end": "2026-07-12"
+        },
+        {
+          "raw": "28-29 AUGUST",
+          "start": "2026-08-28",
+          "end": "2026-08-29"
+        },
+        {
+          "raw": "29 AUGUST",
+          "start": "2026-08-29",
+          "end": "2026-08-29"
+        },
+        {
+          "raw": "4 OCTOBER",
+          "start": "2026-10-04",
+          "end": "2026-10-04"
+        },
+        {
+          "raw": "16-18 OCTOBER",
+          "start": "2026-10-16",
+          "end": "2026-10-18"
+        },
+        {
+          "raw": "18 OCTOBER",
+          "start": "2026-10-18",
+          "end": "2026-10-18"
+        },
+        {
+          "raw": "23 OCTOBER",
+          "start": "2026-10-23",
+          "end": "2026-10-23"
+        }
+      ],
+      "ocr_verification": {
+        "status": "verified",
+        "matched_ranges": 6,
+        "text_ranges": 8,
+        "ocr_ranges": 14
+      }
     },
     "czech-drift-series-calendar": {
       "date_candidates": [
@@ -343,8 +522,18 @@
           "end": "2026-05-09"
         },
         {
+          "raw": "9 mai",
+          "start": "2026-05-09",
+          "end": "2026-05-09"
+        },
+        {
           "raw": "du 23 au 24 mai 2026",
           "start": "2026-05-23",
+          "end": "2026-05-24"
+        },
+        {
+          "raw": "24 mai",
+          "start": "2026-05-24",
           "end": "2026-05-24"
         },
         {
@@ -353,8 +542,18 @@
           "end": "2026-06-07"
         },
         {
+          "raw": "7 juin",
+          "start": "2026-06-07",
+          "end": "2026-06-07"
+        },
+        {
           "raw": "du 27 au 28 juin 2026",
           "start": "2026-06-27",
+          "end": "2026-06-28"
+        },
+        {
+          "raw": "28 juin",
+          "start": "2026-06-28",
           "end": "2026-06-28"
         },
         {
@@ -363,13 +562,43 @@
           "end": "2026-08-30"
         },
         {
+          "raw": "30 août",
+          "start": "2026-08-30",
+          "end": "2026-08-30"
+        },
+        {
+          "raw": "31 août",
+          "start": "2026-08-31",
+          "end": "2026-08-31"
+        },
+        {
+          "raw": "14 septembre",
+          "start": "2026-09-14",
+          "end": "2026-09-14"
+        },
+        {
           "raw": "du 19 au 20 septembre 2026",
           "start": "2026-09-19",
           "end": "2026-09-20"
         },
         {
+          "raw": "20 septembre",
+          "start": "2026-09-20",
+          "end": "2026-09-20"
+        },
+        {
+          "raw": "21 septembre",
+          "start": "2026-09-21",
+          "end": "2026-09-21"
+        },
+        {
           "raw": "du 21 au 22 novembre 2026",
           "start": "2026-11-21",
+          "end": "2026-11-22"
+        },
+        {
+          "raw": "22 novembre",
+          "start": "2026-11-22",
           "end": "2026-11-22"
         }
       ],
@@ -539,6 +768,36 @@
     "d1nz-calendar": {
       "date_candidates": [
         {
+          "raw": "13-14 February",
+          "start": "2026-02-13",
+          "end": "2026-02-14"
+        },
+        {
+          "raw": "14 February",
+          "start": "2026-02-14",
+          "end": "2026-02-14"
+        },
+        {
+          "raw": "20-22 March",
+          "start": "2026-03-20",
+          "end": "2026-03-22"
+        },
+        {
+          "raw": "22 March",
+          "start": "2026-03-22",
+          "end": "2026-03-22"
+        },
+        {
+          "raw": "23-25 April",
+          "start": "2026-04-23",
+          "end": "2026-04-25"
+        },
+        {
+          "raw": "25 April",
+          "start": "2026-04-25",
+          "end": "2026-04-25"
+        },
+        {
           "raw": "August 24, 2026",
           "start": "2026-08-24",
           "end": "2026-08-24"
@@ -547,6 +806,16 @@
           "raw": "August 26, 2026",
           "start": "2026-08-26",
           "end": "2026-08-26"
+        },
+        {
+          "raw": "21-22 November",
+          "start": "2026-11-21",
+          "end": "2026-11-22"
+        },
+        {
+          "raw": "22 November",
+          "start": "2026-11-22",
+          "end": "2026-11-22"
         }
       ],
       "items": [
@@ -1015,5 +1284,5 @@
     ]
   },
   "live_notifications": {},
-  "last_youtube_check_at": "2026-08-29T18:01:47.459390+00:00"
+  "last_youtube_check_at": "2026-08-29T18:05:24.767193+00:00"
 }
