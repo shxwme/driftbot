@@ -95,17 +95,11 @@ def send_webhook(message: str | dict[str, Any], *, dry_run: bool = False) -> Non
         )
 
 
-def format_change(source: dict[str, Any], before: Any, after: Any) -> dict[str, Any]:
+def format_change(source: dict[str, Any], before: Any, after: Any) -> dict[str, Any] | None:
     source_name = source.get("name", source.get("id", "źródło"))
-    payload = (
-        format_upcoming_digest([(source, after)])
-        if isinstance(after, dict)
-        else {
-            "embeds": [
-                {"title": f"🔔 DRIFT RADAR · zmiana: {source_name}", "description": "Wykryto aktualizację źródła."}
-            ]
-        }
-    )
+    if not isinstance(after, dict) or not _upcoming_events([(source, after)]):
+        return None
+    payload = format_upcoming_digest([(source, after)])
     embed = payload["embeds"][0]
     embed["title"] = f"🔔 DRIFT RADAR · aktualizacja: {source_name}"
     embed["description"] = "Wykryto zmianę w źródle. Poniżej pokazano tylko aktualne, nadchodzące daty."

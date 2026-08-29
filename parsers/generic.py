@@ -115,6 +115,35 @@ def extract_date_candidates(text: str, *, default_year: int | None = None) -> li
     inferred_years = [int(value) for value in re.findall(r"\b(20\d{2})\b", text)]
     inferred_year = inferred_years[0] if inferred_years else default_year
     if inferred_year:
+        for match in re.finditer(
+            r"\b(\d{1,2})\s*[–-]\s*(\d{1,2})\s+([A-Za-zÀ-ÿ]{3,12})\b",
+            text,
+            re.I,
+        ):
+            day_a, day_b, month_name = match.groups()
+            month_num = MONTHS.get(month_name.lower())
+            if not month_num:
+                continue
+            try:
+                add(
+                    match.group(0),
+                    date(inferred_year, month_num, int(day_a)),
+                    date(inferred_year, month_num, int(day_b)),
+                )
+            except ValueError:
+                continue
+
+        for match in re.finditer(r"\b(\d{1,2})\s+([A-Za-zÀ-ÿ]{3,12})\b", text, re.I):
+            day, month_name = match.groups()
+            month_num = MONTHS.get(month_name.lower())
+            if not month_num:
+                continue
+            try:
+                value = date(inferred_year, month_num, int(day))
+                add(match.group(0), value, value)
+            except ValueError:
+                continue
+
         for match in re.finditer(r"\b([A-Za-zÀ-ÿ]{3,12})\s+(\d{1,2})\s*[–-]\s*(\d{1,2})\b", text, re.I):
             month_name, day_a, day_b = match.groups()
             month_num = MONTHS.get(month_name.lower())
@@ -277,6 +306,21 @@ def fetch_html(source: dict[str, Any]) -> dict[str, Any]:
             {f"{item['start']}|{item['end']}": item for item in ocr_dates}.values(),
             key=lambda item: (item["start"], item["end"]),
         )
+        text_ranges = {(item["start"], item["end"]) for item in result["date_candidates"]}
+        ocr_ranges = {(item["start"], item["end"]) for item in result["ocr_date_candidates"]}
+        matched_ranges = text_ranges & ocr_ranges
+        if text_ranges and ocr_ranges:
+            verification_status = "verified" if matched_ranges else "mismatch"
+        elif ocr_ranges:
+            verification_status = "ocr_only"
+        else:
+            verification_status = "no_ocr_dates"
+        result["ocr_verification"] = {
+            "status": verification_status,
+            "matched_ranges": len(matched_ranges),
+            "text_ranges": len(text_ranges),
+            "ocr_ranges": len(ocr_ranges),
+        }
         if source.get("ocr_required", True) and image_refs and not images:
             details = "; ".join(error["error"] for error in result.get("image_errors", []))
             raise RuntimeError(f"calendar OCR failed: {details or 'no image was processed'}")

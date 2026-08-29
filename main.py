@@ -202,12 +202,16 @@ def run(
             previous = old_sources.get(source_id)
             notify_source_change = source.get("type") != "youtube"
             if previous is not None and previous != current and not no_notify and notify_source_change:
-                send_webhook(format_change(source, previous, current), dry_run=dry_run)
+                change_payload = format_change(source, previous, current)
+                if change_payload:
+                    send_webhook(change_payload, dry_run=dry_run)
                 changed += 1
             elif previous is not None and previous != current:
                 changed += 1
             elif previous is None and not bootstrap and not no_notify and notify_source_change:
-                send_webhook(format_change(source, "brak", current), dry_run=dry_run)
+                change_payload = format_change(source, "brak", current)
+                if change_payload:
+                    send_webhook(change_payload, dry_run=dry_run)
                 changed += 1
             elif previous is None and not bootstrap:
                 changed += 1

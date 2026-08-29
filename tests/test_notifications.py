@@ -72,6 +72,15 @@ class NotificationTests(unittest.TestCase):
         self.assertNotIn("Poprzedni odczyt", str(payload))
         self.assertIn("https://youtube.com/example", str(payload))
 
+    @patch("discord_notify.warsaw_now", return_value=datetime(2026, 8, 29, 20, 0, tzinfo=LOCAL_TZ))
+    def test_past_only_calendar_change_is_silent(self, _mock_now) -> None:
+        source = {"id": "calendar", "name": "Calendar", "url": "https://example.com"}
+        after = {
+            "date_candidates": [{"raw": "01.01.2026", "start": "2026-01-01", "end": "2026-01-01"}],
+            "items": [],
+        }
+        self.assertIsNone(format_change(source, {}, after))
+
 
 if __name__ == "__main__":
     unittest.main()
