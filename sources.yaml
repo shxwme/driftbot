@@ -4,7 +4,7 @@ sources:
   - {id: drift-open-calendar, name: "Drift Open Polish Drift Series", type: html, url: "https://www.driftopen.com/kalendarz/", selector: main, needs_review: true}
   - {id: polish-drift-show-calendar, name: "PDS Polish Drift Show", type: html, url: "https://www.polishdriftshow.pl/eventy-2026/", selector: main, needs_review: true}
   - {id: drift-masters-calendar, name: "Drift Masters", type: html, url: "https://dm.gp/seasons/drift-masters-2026/", selector: main, needs_review: true}
-  - {id: drift-kings-calendar, name: "Drift Kings International Series", type: html, url: "https://driftkings.com/dk26/", selector: main, include_images: true, image_urls: ["https://driftkings-com.b-cdn.net/wp-content/uploads/2026/07/calendar2026tr.webp"], needs_review: true}
+  - {id: drift-kings-calendar, name: "Drift Kings International Series", type: html, url: "https://driftkings.com/dk26/", selector: main, include_images: true, image_urls: ["https://driftkings-com.b-cdn.net/wp-content/uploads/2026/07/calendar2026tr.webp"], fallback_image_urls: ["https://driftkings.com/wp-content/uploads/2026/07/calendar2026tr.webp"], needs_review: true}
   - {id: czech-drift-series-calendar, name: "Czech Drift Series", type: html, url: "https://www.drifting.cz/en/cds", selector: main, needs_review: true}
   - {id: baltic-drift-calendar, name: "Baltic Drift Championship / Latvia Drift", type: html, url: "https://www.driftlatvia.com/kalendars/", selector: main, needs_review: true}
   - {id: france-drift-calendar, name: "Championnat de France de Drift", type: html, url: "https://driftfrance.com/calendrier", selector: main, needs_review: true}

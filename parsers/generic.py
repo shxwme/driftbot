@@ -171,16 +171,20 @@ def fetch_html(source: dict[str, Any]) -> dict[str, Any]:
             if re.search(r"calendar|calendrier|kalendar", f"{url} {alt}", re.I)
         ]
         for image_url, alt in (calendar_refs or image_refs[:10]):
-                image_response = requests.get(
-                    image_url,
-                    headers={"User-Agent": "DriftRadar/1.0", "Referer": source["url"]},
-                    timeout=30,
-                )
-                if image_response.status_code in (400, 403):
-                    image_response = requests.get(
-                        image_url, headers={"User-Agent": "DriftRadar/1.0"}, timeout=30
+                candidates = [image_url, *source.get("fallback_image_urls", [])]
+                image_response = None
+                for candidate_url in candidates:
+                    response = requests.get(
+                        candidate_url,
+                        headers={"User-Agent": "DriftRadar/1.0", "Referer": source["url"]},
+                        timeout=30,
                     )
-                image_response.raise_for_status()
+                    if response.ok:
+                        image_response = response
+                        image_url = candidate_url
+                        break
+                if image_response is None:
+                    raise RuntimeError(f"calendar image unavailable: {image_url}")
                 if len(image_response.content) > 12 * 1024 * 1024:
                     raise RuntimeError(f"calendar image is too large: {image_url}")
                 image_bytes = image_response.content
