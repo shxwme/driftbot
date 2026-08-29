@@ -135,12 +135,18 @@ def fetch_rss(source: dict[str, Any]) -> list[dict[str, str]]:
 
 
 def fetch_html(source: dict[str, Any]) -> dict[str, Any]:
-    response = requests.get(
-        source["url"],
-        headers={"User-Agent": "DriftRadar/1.0 (+personal monitor)"},
-        timeout=30,
-    )
-    response.raise_for_status()
+    response = None
+    for page_url in [source["url"], *source.get("fallback_urls", [])]:
+        candidate = requests.get(
+            page_url,
+            headers={"User-Agent": "DriftRadar/1.0 (+personal monitor)"},
+            timeout=30,
+        )
+        if candidate.ok:
+            response = candidate
+            break
+    if response is None:
+        raise RuntimeError(f"calendar page unavailable: {source['url']}")
     soup = BeautifulSoup(response.text, "html.parser")
     selector = source.get("selector", "body")
     nodes = soup.select(selector)
@@ -155,7 +161,7 @@ def fetch_html(source: dict[str, Any]) -> dict[str, Any]:
     }
     if source.get("include_images"):
         images = []
-        image_refs = [(urljoin(source["url"], url), "") for url in source.get("image_urls", [])]
+        image_refs = [(urljoin(response.url, url), "") for url in source.get("image_urls", [])]
         if not image_refs:
             for image in soup.select("img"):
                 raw_url = next(
