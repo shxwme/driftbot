@@ -154,6 +154,7 @@ def fetch_html(source: dict[str, Any]) -> dict[str, Any]:
         "items": [" ".join(node.get_text(" ", strip=True).split()) for node in nodes],
     }
     if source.get("include_images"):
+        images = []
         image_refs = []
         for image in soup.select("img"):
             raw_url = next(
