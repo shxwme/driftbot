@@ -567,16 +567,6 @@
           "end": "2026-06-28"
         },
         {
-          "raw": "du 29 au 30 août 2026",
-          "start": "2026-08-29",
-          "end": "2026-08-30"
-        },
-        {
-          "raw": "30 août",
-          "start": "2026-08-30",
-          "end": "2026-08-30"
-        },
-        {
           "raw": "31 août",
           "start": "2026-08-31",
           "end": "2026-08-31"
@@ -613,7 +603,7 @@
         }
       ],
       "items": [
-        "fr en es it Concurrents Organisation Partenaires Médias Trackdays À propos Contact Calendrier Résultats Engagés Pilotes Équipes NEWS Galeries Photos Vidéos SHOP Billetterie Live Calendrier Résultats Engagés Engagés Pilotes Pilotes Équipes Équipes NEWS Galeries Galeries Photos Photos Vidéos Vidéos Billetterie live Billetterie Shop Concurrents Organisation Partenaires Médias Trackdays À propos Contact fr en es it Nos événements Accueil Calendrier Manche 6 - Calmont du 29 au 30 août 2026 Plus d'infos Billetterie Manche 7 (Finale) - Lédenon du 19 au 20 septembre 2026 Plus d'infos BILLETTERIE RADAR 27 - Trackday de détection du 21 au 22 novembre 2026 Plus d'infos Billetterie Événements passés Catégories Toutes Années Toutes Manche 5 - Luby-Osmets du 27 au 28 juin 2026 Plus d'infos Manche 4 - Croix en Ternois du 6 au 7 juin 2026 Plus d'infos Manche 3 - Val d'Argenton du 23 au 24 mai 2026 Plus d'infos Manche 2 - Vesoul du 8 au 9 mai 2026 Plus d'infos Manche 6 (Finale) - Charade du 20 au 21 septembre 2025 Plus d'infos Lédenon Racing Séries x CFDays du 12 au 14 septembre 2025 Plus d'infos Manche 5 - Calmont du 30 au 31 août 2025 Plus d'infos Montrer plus d'événements Nos partenaires Championnat de France de Drift - CFD Copyright © 2026 — Mentions Légales / RGPD Contactez-nous +33 (0)7 60 33 55 00 contact@driftfrance.com Suivez nous sur les réseaux sociaux"
+        "fr en es it Concurrents Organisation Partenaires Médias Trackdays À propos Contact Calendrier Résultats Engagés Pilotes Équipes NEWS Galeries Photos Vidéos SHOP Billetterie Live Calendrier Résultats Engagés Engagés Pilotes Pilotes Équipes Équipes NEWS Galeries Galeries Photos Photos Vidéos Vidéos Billetterie live Billetterie Shop Concurrents Organisation Partenaires Médias Trackdays À propos Contact fr en es it Nos événements Accueil Calendrier Manche 7 (Finale) - Lédenon du 19 au 20 septembre 2026 Plus d'infos BILLETTERIE RADAR 27 - Trackday de détection du 21 au 22 novembre 2026 Plus d'infos Billetterie Événements passés Catégories Toutes Années Toutes Manche 5 - Luby-Osmets du 27 au 28 juin 2026 Plus d'infos Manche 4 - Croix en Ternois du 6 au 7 juin 2026 Plus d'infos Manche 3 - Val d'Argenton du 23 au 24 mai 2026 Plus d'infos Manche 2 - Vesoul du 8 au 9 mai 2026 Plus d'infos Manche 6 (Finale) - Charade du 20 au 21 septembre 2025 Plus d'infos Lédenon Racing Séries x CFDays du 12 au 14 septembre 2025 Plus d'infos Manche 5 - Calmont du 30 au 31 août 2025 Plus d'infos Montrer plus d'événements Nos partenaires Championnat de France de Drift - CFD Copyright © 2026 — Mentions Légales / RGPD Contactez-nous +33 (0)7 60 33 55 00 contact@driftfrance.com Suivez nous sur les réseaux sociaux"
       ]
     },
     "irish-drift-calendar": {
@@ -1194,12 +1184,12 @@
       {
         "id": "izNRQ85o73g",
         "title": "【日曜版生放送】D1 Lights Series Rd.8備北サーキット",
-        "published": "2026-08-26T08:22:38Z",
+        "published": "2026-08-30T07:25:37Z",
         "privacy_status": "public",
-        "live_status": "live",
+        "live_status": "none",
         "scheduled_start": "2026-08-30T00:35:00Z",
         "actual_start": "2026-08-30T00:35:27Z",
-        "actual_end": null
+        "actual_end": "2026-08-30T07:04:56Z"
       },
       {
         "id": "wzIvBTN_ALU",
@@ -1296,5 +1286,5 @@
   "live_notifications": {
     "d1gp-youtube:izNRQ85o73g:2026-08-30T00:35:00Z:live": "2026-08-30T00:46:07.470318+00:00"
   },
-  "last_youtube_check_at": "2026-08-30T05:52:31.145302+00:00"
+  "last_youtube_check_at": "2026-08-30T09:59:49.748985+00:00"
 }
