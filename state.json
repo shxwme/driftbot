@@ -1192,6 +1192,16 @@
     ],
     "d1gp-youtube": [
       {
+        "id": "izNRQ85o73g",
+        "title": "【日曜版生放送】D1 Lights Series Rd.8備北サーキット",
+        "published": "2026-08-26T08:22:38Z",
+        "privacy_status": "public",
+        "live_status": "live",
+        "scheduled_start": "2026-08-30T00:35:00Z",
+        "actual_start": "2026-08-30T00:35:27Z",
+        "actual_end": null
+      },
+      {
         "id": "wzIvBTN_ALU",
         "title": "【土曜版生放送】D1 Lights Series Rd.7備北サーキット",
         "published": "2026-08-29T07:37:29Z",
@@ -1200,16 +1210,6 @@
         "scheduled_start": "2026-08-29T00:35:00Z",
         "actual_start": "2026-08-29T00:35:33Z",
         "actual_end": "2026-08-29T07:13:47Z"
-      },
-      {
-        "id": "izNRQ85o73g",
-        "title": "【日曜版生放送】D1 Lights Series Rd.8備北サーキット",
-        "published": "2026-08-26T08:22:38Z",
-        "privacy_status": "public",
-        "live_status": "upcoming",
-        "scheduled_start": "2026-08-30T00:35:00Z",
-        "actual_start": null,
-        "actual_end": null
       },
       {
         "id": "3dYXP1bdlTY",
@@ -1293,6 +1293,8 @@
       }
     ]
   },
-  "live_notifications": {},
-  "last_youtube_check_at": "2026-08-29T22:48:52.384527+00:00"
+  "live_notifications": {
+    "d1gp-youtube:izNRQ85o73g:2026-08-30T00:35:00Z:live": "2026-08-30T00:46:07.470318+00:00"
+  },
+  "last_youtube_check_at": "2026-08-30T00:46:07.470318+00:00"
 }
