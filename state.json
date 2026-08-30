@@ -615,11 +615,6 @@
     "drift-league-gb-calendar": {
       "date_candidates": [
         {
-          "raw": "August 5, 2026",
-          "start": "2026-08-05",
-          "end": "2026-08-05"
-        },
-        {
           "raw": "August 9, 2026",
           "start": "2026-08-09",
           "end": "2026-08-09"
@@ -628,10 +623,15 @@
           "raw": "August 23, 2026",
           "start": "2026-08-23",
           "end": "2026-08-23"
+        },
+        {
+          "raw": "August 30, 2026",
+          "start": "2026-08-30",
+          "end": "2026-08-30"
         }
       ],
       "items": [
-        "07843 005395 info@driftleague.co.uk R1: 3 Sisters MAY 3/4 R2: Driftland JUN 7/8 R3: Teesside JUL 12/13 R4: Pembrey JAUG 16/17 R5: 3 Sisters OCT 4/5 Home 2026 Season Live Results Youtube Stream Standings 2026 2025 2024 2023 Rules News Contact Us Shop Menu 2 events found. Events Events Search and Views Navigation Search Enter Keyword. Search for Events by Keyword. Find Events Event Views Navigation List List Today Upcoming Upcoming Select date. September 2026 Sat 12 Round 5 12th September @ 10:00 am - 13th September @ 6:00 pm Teesside Autodrome South Tees Motor Sports Park, South Bank Road, Middlesbrough Welcome to the final round at Teesside. We return to the North East for the final round of Drift League 2026. Everything […] October 2026 Sat 3 Round X 3rd October @ 10:00 am - 4th October @ 6:00 pm Three Sisters Circuit Three Sisters Road, Ashton-in-Makerfield, Wigan, United Kingdom As the season draws to a close and the nights get longer, Drift League host a weekend for the drivers to unwind […] Previous Events Today Next Events Subscribe to calendar Google Calendar iCalendar Outlook 365 Outlook Live Export .ics file Export Outlook .ics file Drift League GB In Drift League there is no vehicle age restriction. Any car, any year, any motor. We’re interested in FWD to RWD conversions, we’re interested in unique and custom builds. Together we can really push the boundaries with car builds in the UK. Latest posts After Rd4 comes Rd5! August 23, 2026 Round 4 Pembrey coming in hot August 9, 2026 Do you have yours yet? August 5, 2026 Navigation Home 2026 Season Entry Rules Recent News Some of the Drivers Staff & Media Contact us Drift League GB 2023 Home 2026 Season Live Results Youtube Stream Standings 2026 2025 2024 2023 Rules News Contact Us Shop"
+        "07843 005395 info@driftleague.co.uk R1: 3 Sisters MAY 3/4 R2: Driftland JUN 7/8 R3: Teesside JUL 12/13 R4: Pembrey JAUG 16/17 R5: 3 Sisters OCT 4/5 Home 2026 Season Live Results Youtube Stream Standings 2026 2025 2024 2023 Rules News Contact Us Shop Menu 2 events found. Events Events Search and Views Navigation Search Enter Keyword. Search for Events by Keyword. Find Events Event Views Navigation List List Today Upcoming Upcoming Select date. September 2026 Sat 12 Round 5 12th September @ 10:00 am - 13th September @ 6:00 pm Teesside Autodrome South Tees Motor Sports Park, South Bank Road, Middlesbrough Welcome to the final round at Teesside. We return to the North East for the final round of Drift League 2026. Everything […] October 2026 Sat 3 Round X 3rd October @ 10:00 am - 4th October @ 6:00 pm Three Sisters Circuit Three Sisters Road, Ashton-in-Makerfield, Wigan, United Kingdom As the season draws to a close and the nights get longer, Drift League host a weekend for the drivers to unwind […] Previous Events Today Next Events Subscribe to calendar Google Calendar iCalendar Outlook 365 Outlook Live Export .ics file Export Outlook .ics file Drift League GB In Drift League there is no vehicle age restriction. Any car, any year, any motor. We’re interested in FWD to RWD conversions, we’re interested in unique and custom builds. Together we can really push the boundaries with car builds in the UK. Latest posts fastest way round a corner? August 30, 2026 After Rd4 comes Rd5! August 23, 2026 Round 4 Pembrey coming in hot August 9, 2026 Navigation Home 2026 Season Entry Rules Recent News Some of the Drivers Staff & Media Contact us Drift League GB 2023 Home 2026 Season Live Results Youtube Stream Standings 2026 2025 2024 2023 Rules News Contact Us Shop"
       ]
     },
     "formula-drift-calendar": {
@@ -1286,5 +1286,5 @@
   "live_notifications": {
     "d1gp-youtube:izNRQ85o73g:2026-08-30T00:35:00Z:live": "2026-08-30T00:46:07.470318+00:00"
   },
-  "last_youtube_check_at": "2026-08-30T18:30:14.600260+00:00"
+  "last_youtube_check_at": "2026-08-30T21:14:07.809921+00:00"
 }
