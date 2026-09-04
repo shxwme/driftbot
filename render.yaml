@@ -1,0 +1,23 @@
+services:
+  - type: web
+    name: drift-radar
+    runtime: docker
+    plan: free
+    region: frankfurt
+    dockerfilePath: ./Dockerfile
+    dockerCommand: python cloud_web.py
+    healthCheckPath: /healthz
+    autoDeployTrigger: off
+    envVars:
+      - key: SUPABASE_URL
+        value: https://qbrpnutjhvgajjzqjcxr.supabase.co
+      - key: SUPABASE_SECRET_KEY
+        sync: false
+      - key: CRON_SECRET
+        sync: false
+      - key: YOUTUBE_API_KEY
+        sync: false
+      - key: DISCORD_WEBHOOK_URL
+        sync: false
+      - key: YOUTUBE_DAILY_BUDGET
+        value: "8500"

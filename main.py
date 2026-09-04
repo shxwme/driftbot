@@ -163,6 +163,10 @@ def run(
     calendar_changes: list[tuple[dict[str, Any], Any]] = []
     live_notifications = state.setdefault("live_notifications", {})
     all_sources = load_sources()
+    if source_id := os.environ.get("DRIFT_SOURCE_ID"):
+        all_sources = [source for source in all_sources if source["id"] == source_id]
+        if not all_sources:
+            raise ValueError("Unknown DRIFT_SOURCE_ID")
     selected_sources = [
         source
         for source in all_sources
@@ -203,6 +207,13 @@ def run(
                     if v.get("live_status") in ("live", "upcoming") and not v.get("actual_end")
                 ]
             current = fetch(source)
+            if os.environ.get("DRIFT_REMOTE_STATE_KEY") and isinstance(current, dict):
+                # Do not transfer whole scraped pages or OCR text on every cloud poll.
+                current = {
+                    k: v
+                    for k, v in current.items()
+                    if k in ("events", "verification", "ocr_verification", "retrieved_url")
+                }
             if source.get("uploads_playlist_id"):
                 youtube_cache[source_id] = {"uploads_playlist_id": source["uploads_playlist_id"]}
             successful += 1

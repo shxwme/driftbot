@@ -1,5 +1,9 @@
 # Drift Radar
 
+**Wariant Render Free + Supabase + cron-job.org:** konfiguracja, limity i stan
+wdrożenia w [instrukcji](DEPLOY_RENDER_FREE.md). Poniższy opis `service.py` dotyczy
+alternatywnego demona na własnej VM; Render uruchamia `cloud_web.py`.
+
 Samodzielna usługa Python → Discord. **Bez GitHub Actions.** GitHub przechowuje kod,
 a program pracuje na osobnej maszynie Linux. Po wdrożeniu nie korzysta z komputera właściciela.
 

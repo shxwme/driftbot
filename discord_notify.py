@@ -72,6 +72,9 @@ def send_webhook(message: str | dict[str, Any], *, dry_run: bool = False) -> Non
         raise RuntimeError("DISCORD_WEBHOOK_URL is not configured")
     payload = message if isinstance(message, dict) else {"content": message}
     payload.setdefault("allowed_mentions", {"parse": []})
+    from cloud_store import assert_lease
+
+    assert_lease()
     response = None
     for attempt in range(3):
         try:
