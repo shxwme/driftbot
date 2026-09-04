@@ -74,7 +74,10 @@ def send_webhook(message: str | dict[str, Any], *, dry_run: bool = False) -> Non
     payload.setdefault("allowed_mentions", {"parse": []})
     response = None
     for attempt in range(3):
-        response = requests.post(url, json=payload, timeout=20)
+        try:
+            response = requests.post(url, params={"wait": "true", "with_components": "true"}, json=payload, timeout=20)
+        except requests.RequestException:
+            raise RuntimeError("Discord transport failed; message remains pending where supported") from None
         if response.status_code == 429:
             retry_after = float(response.json().get("retry_after", 1))
             time.sleep(min(retry_after, 10))
@@ -82,11 +85,13 @@ def send_webhook(message: str | dict[str, Any], *, dry_run: bool = False) -> Non
         if response.status_code >= 500 and attempt < 2:
             time.sleep(2**attempt)
             continue
-        response.raise_for_status()
+        if not response.ok:
+            raise RuntimeError(f"Discord rejected message: HTTP {response.status_code}")
         break
     if response is None:
         raise RuntimeError("Discord webhook did not return a response")
-    response.raise_for_status()
+    if not response.ok:
+        raise RuntimeError(f"Discord rejected message: HTTP {response.status_code}")
     if isinstance(payload, dict) and "embeds" in payload:
         print(
             "Discord accepted embed payload: "
@@ -188,46 +193,6 @@ POLISH_MONTHS = [
 ]
 
 
-def _event_label(source: dict[str, Any], current: dict[str, Any], raw: str) -> str:
-    text = " ".join(str(item) for item in current.get("items", []))
-    day = re.search(r"\b(\d{1,2})", raw)
-    month = re.search(
-        r"(?:jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec|stycz|lut|mar|kwi|maj|cze|lip|sie|wrz|paź|lis|gru)",
-        raw,
-        re.I,
-    )
-    markers = list(
-        re.finditer(r"(?:RND\s*\d+|RD\s*\d+|Round\s*\d+|Grand Finale|Finale|SPECIAL EVENT|Winter Training)", text, re.I)
-    )
-    if markers and day and month:
-        nearby = [
-            marker
-            for marker in markers
-            if day.group(1) in text[max(0, marker.start() - 250) : marker.end() + 250]
-            and month.group(0).lower() in text[max(0, marker.start() - 250) : marker.end() + 250].lower()
-        ]
-        if nearby:
-            date_anchor = re.search(
-                rf"{re.escape(month.group(0))}\D{{0,5}}{re.escape(day.group(1))}",
-                text,
-                re.I,
-            )
-            anchor = date_anchor.start() if date_anchor else text.lower().find(month.group(0).lower())
-            preceding = [marker for marker in nearby if marker.start() <= anchor]
-            label = (
-                preceding[-1] if preceding else min(nearby, key=lambda marker: abs(marker.start() - anchor))
-            ).group(0)
-            normalized = re.sub(r"^RND\s*|^RD\s*|^Round\s*", "", label, flags=re.I)
-            if label.lower().startswith("special"):
-                return "Event specjalny"
-            if label.lower().startswith("winter"):
-                return "Trening zimowy"
-            if "finale" in label.lower():
-                return "Wielki finał"
-            return f"Runda {normalized}" if normalized.isdigit() else label.title()
-    return source.get("event_label", "Wydarzenie")
-
-
 def _upcoming_events(observations: list[tuple[dict[str, Any], Any]]) -> list[dict[str, Any]]:
     today = warsaw_today()
     now = warsaw_now()
@@ -243,7 +208,10 @@ def _upcoming_events(observations: list[tuple[dict[str, Any], Any]]) -> list[dic
                 if not scheduled:
                     continue
                 try:
-                    video_start = datetime.fromisoformat(scheduled.replace("Z", "+00:00")).astimezone(LOCAL_TZ)
+                    parsed_start = datetime.fromisoformat(scheduled.replace("Z", "+00:00"))
+                    if parsed_start.tzinfo is None:
+                        continue
+                    video_start = parsed_start.astimezone(LOCAL_TZ)
                     video_day = video_start.date()
                 except ValueError:
                     continue
@@ -256,7 +224,7 @@ def _upcoming_events(observations: list[tuple[dict[str, Any], Any]]) -> list[dic
                         pass
                 if video.get("live_status") == "none" and video_start < now:
                     continue
-                if video_day >= today:
+                if video_day >= today or video.get("live_status") == "live":
                     events.append(
                         {
                             "start": video_day,
@@ -273,7 +241,7 @@ def _upcoming_events(observations: list[tuple[dict[str, Any], Any]]) -> list[dic
             continue
         if not isinstance(current, dict):
             continue
-        candidates = current.get("date_candidates") or current.get("ocr_date_candidates") or []
+        candidates = [event for event in current.get("events", []) if event.get("verified") is True]
         parsed: list[dict[str, Any]] = []
         for candidate in candidates:
             try:
@@ -282,22 +250,16 @@ def _upcoming_events(observations: list[tuple[dict[str, Any], Any]]) -> list[dic
             except (KeyError, TypeError, ValueError):
                 continue
             if end >= today:
-                parsed.append({"start": start, "end": end, "raw": str(candidate.get("raw", ""))})
-        unique: dict[tuple[date, date], dict[str, Any]] = {(item["start"], item["end"]): item for item in parsed}
-        for item in list(unique.values()):
-            if item["start"] == item["end"] and any(
-                other["start"] <= item["start"] <= other["end"] and other["start"] != other["end"]
-                for other in unique.values()
-            ):
-                unique.pop((item["start"], item["end"]), None)
+                parsed.append({**candidate, "start": start, "end": end, "raw": str(candidate.get("raw", ""))})
+        unique = {(item["start"], item["end"], item.get("label", "")): item for item in parsed}
         for item in sorted(unique.values(), key=lambda item: item["start"]):
             events.append(
                 {
                     **item,
                     "series": source.get("name", source.get("id", "Drift")),
-                    "label": _event_label(source, current, item["raw"]),
+                    "label": item.get("label", "Wydarzenie"),
                     "watch_url": source.get("watch_url"),
-                    "calendar_url": source.get("url"),
+                    "calendar_url": item.get("source_url", source.get("url")),
                     "is_live": False,
                 }
             )
@@ -306,100 +268,92 @@ def _upcoming_events(observations: list[tuple[dict[str, Any], Any]]) -> list[dic
 
 def format_upcoming_digest(observations: list[tuple[dict[str, Any], Any]]) -> dict[str, Any]:
     events = _upcoming_events(observations)
+    # Live first; then calendar dates and exact scheduled times.
+    events.sort(key=lambda event: (not event.get("is_live"), _event_sort_key(event)))
     today = warsaw_today()
-    fields: list[dict[str, str]] = []
-    watch_buttons: list[dict[str, Any]] = []
-    calendar_buttons: list[dict[str, Any]] = []
-    grouped: dict[date, list[dict[str, Any]]] = {}
-    visible_events = events[:16]
-    for event in visible_events:
-        group_day = today if event["start"] < today <= event["end"] else event["start"]
-        grouped.setdefault(group_day, []).append(event)
-    for day, day_events in list(sorted(grouped.items()))[:12]:
-        month = POLISH_MONTHS[day.month - 1]
-        lines = []
-        for event in day_events:
-            when = (
-                f"{event['start'].day} {month}"
-                if event["start"] == event["end"]
-                else f"{event['start'].day}–{event['end'].day} {month}"
-            )
-            if event.get("is_live"):
-                urgency = "🔴 LIVE!"
-            elif event["start"] <= today <= event["end"]:
-                urgency = "🔥 TO DZIŚ!"
-            elif (event["start"] - today).days == 1:
-                urgency = "⏳ JUTRO"
-            else:
-                urgency = f"⏱️ za {(event['start'] - today).days} dni"
-            scheduled_time = ""
-            if event.get("scheduled_at"):
-                local_start = datetime.fromisoformat(event["scheduled_at"].replace("Z", "+00:00")).astimezone(LOCAL_TZ)
-                scheduled_time = f" · 🕒 **{local_start:%H:%M}** · <t:{int(local_start.timestamp())}:R>"
-                night = _overnight_label(local_start)
-            else:
-                night = ""
-            links = []
-            if event["watch_url"]:
-                links.append(f"[▶ Oglądaj]({event['watch_url']})")
-            if event["calendar_url"]:
-                links.append(f"[Kalendarz]({event['calendar_url']})")
-            lines.append(
-                f"**{urgency}**\n**{event['series']} · {event['label']}** ({when}{scheduled_time})"
-                + (f"\n{night}" if night else "")
-                + (f"\n{' · '.join(links)}" if links else "")
-            )
-            if event["watch_url"] and event["watch_url"] not in [button.get("url") for button in watch_buttons]:
-                watch_buttons.append(
-                    {
-                        "type": 2,
-                        "style": 5,
-                        "label": _watch_button_label(event),
-                        "url": event["watch_url"],
-                    }
-                )
-            if event["calendar_url"] and event["calendar_url"] not in [
-                button.get("url") for button in calendar_buttons
-            ]:
-                short_series = event["series"].replace(" YouTube", "")[:65]
-                calendar_buttons.append(
-                    {"type": 2, "style": 5, "label": f"📅 {short_series}", "url": event["calendar_url"]}
-                )
-        if day == today:
-            day_heading = f"🔥 DZISIAJ · {day.day} {month} {day.year}"
-        elif day == today + timedelta(days=1):
-            day_heading = f"⏳ JUTRO · {day.day} {month} {day.year}"
+    fields = []
+    buttons = []
+    budget = 5000  # Discord's 6000-character total includes headings, footer, description.
+    shown = 0
+    for event in events[:16]:
+        start, end = event["start"], event["end"]
+        local = (
+            datetime.fromisoformat(event["scheduled_at"].replace("Z", "+00:00")).astimezone(LOCAL_TZ)
+            if event.get("scheduled_at")
+            else None
+        )
+        tonight = local and local.hour < 6 and local.date() == today + timedelta(days=1)
+        if event.get("is_live"):
+            status = "🔴 LIVE TERAZ"
+        elif tonight:
+            status = "🌙 TEJ NOCY"
+        elif start <= today <= end:
+            status = "🔥 TO DZIŚ!"
+        elif start == today + timedelta(days=1):
+            status = "⏳ JUTRO"
         else:
-            day_heading = f"📅 {day.day} {month} {day.year}"
-        fields.append({"name": day_heading, "value": _clip("\n\n".join(lines), 1024), "inline": False})
+            status = f"📅 ZA {(start - today).days} DNI"
+        when = f"{start.day} {POLISH_MONTHS[start.month - 1]}"
+        if end != start:
+            when += f" – {end.day} {POLISH_MONTHS[end.month - 1]}"
+        if local:
+            when += f" · **{local:%H:%M}** · <t:{int(local.timestamp())}:R>"
+        lines = [f"**{_clip(event['label'], 180)}**", when]
+        if local and (night := _overnight_label(local)):
+            lines.append(night)
+        if event.get("venue"):
+            lines.append(f"📍 {_clip(event['venue'], 140)}")
+        if event.get("event_scope") == "weekend":
+            lines.append("Weekend wraz z treningami — godzina transmisji osobno.")
+        if event.get("verification") == "ocr_agreement":
+            lines.append("📷 Termin z plakatu · zgodny odczyt OCR")
+        links = []
+        if event.get("watch_url"):
+            label = "▶ Otwórz transmisję" if local else "Kanał organizatora"
+            links.append(f"[{label}]({event['watch_url']})")
+            if local and len(buttons) < 5 and event["watch_url"] not in [b["url"] for b in buttons]:
+                buttons.append({"type": 2, "style": 5, "label": _watch_button_label(event), "url": event["watch_url"]})
+        elif not local:
+            lines.append("Transmisja: brak potwierdzonego linku.")
+        if event.get("calendar_url"):
+            links.append(f"[Oficjalny kalendarz]({event['calendar_url']})")
+        if links:
+            lines.append(" · ".join(links))
+        field = {
+            "name": _clip(f"{status} · {event['series']}", 256),
+            "value": _clip("\n".join(lines), 1024),
+            "inline": False,
+        }
+        cost = len(field["name"]) + len(field["value"])
+        if cost > budget:
+            break
+        budget -= cost
+        fields.append(field)
+        shown += 1
     if not fields:
-        fields.append(
+        fields = [
             {
-                "name": "Brak nadchodzących wydarzeń",
-                "value": "Nie znaleziono przyszłych dat w aktualnych źródłach.",
+                "name": "Na razie brak potwierdzonych terminów",
+                "value": "Kolejny odczyt odbędzie się automatycznie. Nie publikuję niepewnych dat.",
                 "inline": False,
             }
-        )
-    payload: dict[str, Any] = {
-        "content": (
-            f"🏁 **DRIFT RADAR** · {len(events)} nadchodzących transmisji i wydarzeń"
-            + (f" · pokazuję najbliższe {len(visible_events)}" if len(events) > len(visible_events) else "")
-        ),
+        ]
+    payload = {
+        "content": "🏁 **DRIFT RADAR** · Twój plan oglądania",
         "embeds": [
             {
-                "title": "🏁 DRIFT RADAR · Najbliższe wydarzenia",
+                "title": "Najbliżej toru. Bez szukania.",
                 "description": (
-                    "Najbliższe rundy i transmisje w jednym miejscu. "
-                    "Godziny podaję w czasie polskim; Discord pokazuje też czas względny."
+                    "🔴 trwające transmisje · 🌙 nocne starty · 🏁 nadchodzące rundy\n"
+                    "Godziny w Polsce. Daty zawodów nie oznaczają godziny rozpoczęcia live."
                 ),
-                "color": 0xE63946,
+                "color": 0x8B5CF6,
                 "fields": fields,
-                "footer": {"text": "Źródła oficjalne · strefa czasowa: Europe/Warsaw"},
+                "footer": {"text": f"Pokazano {shown} z {len(events)} terminów · Europe/Warsaw · oficjalne źródła"},
                 "timestamp": warsaw_now().isoformat(),
             }
         ],
     }
-    buttons = (watch_buttons + calendar_buttons)[:5]
     if buttons:
         payload["components"] = [{"type": 1, "components": buttons}]
     return payload

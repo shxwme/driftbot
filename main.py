@@ -8,15 +8,17 @@ from collections.abc import Callable
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Any
+from zoneinfo import ZoneInfo
 
 import requests
 import yaml
 
 from discord_notify import format_change_digest, format_live_alert, format_upcoming_digest, send_webhook
 from parsers.generic import fetch_html, fetch_rss
+from storage import read_state, safe_error, save_state
 
 ROOT = Path(__file__).resolve().parent
-STATE_PATH = ROOT / "state.json"
+STATE_PATH = Path(os.environ.get("DRIFT_STATE_PATH", str(ROOT / "data" / "state.json")))
 SOURCES_PATH = ROOT / "sources.yaml"
 
 if hasattr(sys.stdout, "reconfigure"):
@@ -56,10 +58,21 @@ def fetch(source: dict[str, Any]) -> Any:
     return handlers[kind](source)
 
 
-def fetch_youtube(source: dict[str, Any]) -> list[dict[str, str]]:
+def fetch_youtube(source: dict[str, Any]) -> list[dict[str, Any]]:
     key = os.environ.get("YOUTUBE_API_KEY")
     if not key:
         raise RuntimeError("YOUTUBE_API_KEY is not configured")
+
+    def api_get(endpoint: str, params: dict[str, Any]) -> Any:
+        quota = source.setdefault("_quota", {})
+        day = datetime.now(ZoneInfo("America/Los_Angeles")).date().isoformat()
+        if quota.get("day") != day:
+            quota.update(day=day, used=0)
+        if quota["used"] >= int(os.environ.get("YOUTUBE_DAILY_BUDGET", "8500")):
+            raise RuntimeError("Local YouTube daily budget exhausted; retry after Pacific midnight")
+        quota["used"] += 1
+        return requests.get(f"https://www.googleapis.com/youtube/v3/{endpoint}", params=params, timeout=30)
+
     playlist_id = source.get("uploads_playlist_id")
     if not playlist_id and (source.get("channel_handle") or source.get("channel_username")):
         channel_params = {"part": "contentDetails", "key": key}
@@ -67,9 +80,7 @@ def fetch_youtube(source: dict[str, Any]) -> list[dict[str, str]]:
             channel_params["forHandle"] = source["channel_handle"]
         else:
             channel_params["forUsername"] = source["channel_username"]
-        channel_response = requests.get(
-            "https://www.googleapis.com/youtube/v3/channels", params=channel_params, timeout=30
-        )
+        channel_response = api_get("channels", channel_params)
         channel_response.raise_for_status()
         channels = channel_response.json().get("items", [])
         if not channels:
@@ -78,18 +89,26 @@ def fetch_youtube(source: dict[str, Any]) -> list[dict[str, str]]:
         playlist_id = channels[0]["contentDetails"]["relatedPlaylists"]["uploads"]
     if not playlist_id:
         raise ValueError("YouTube source needs uploads_playlist_id, channel_handle, or channel_username")
-    params = {"part": "snippet", "playlistId": playlist_id, "maxResults": 10, "key": key}
-    response = requests.get("https://www.googleapis.com/youtube/v3/playlistItems", params=params, timeout=30)
+    source["uploads_playlist_id"] = playlist_id
+    params = {"part": "snippet", "playlistId": playlist_id, "maxResults": 50, "key": key}
+    response = api_get("playlistItems", params)
     response.raise_for_status()
     videos = [item["snippet"]["resourceId"]["videoId"] for item in response.json().get("items", [])]
+    videos = list(dict.fromkeys([*source.get("tracked_video_ids", []), *videos]))
     if not videos:
         return []
-    detail_response = requests.get(
-        "https://www.googleapis.com/youtube/v3/videos",
-        params={"part": "snippet,liveStreamingDetails,status", "id": ",".join(videos), "key": key},
-        timeout=30,
-    )
-    detail_response.raise_for_status()
+    details = []
+    for offset in range(0, len(videos), 50):
+        detail_response = api_get(
+            "videos",
+            params={
+                "part": "snippet,liveStreamingDetails,status",
+                "id": ",".join(videos[offset : offset + 50]),
+                "key": key,
+            },
+        )
+        detail_response.raise_for_status()
+        details.extend(detail_response.json().get("items", []))
     return [
         {
             "id": video["id"],
@@ -101,7 +120,7 @@ def fetch_youtube(source: dict[str, Any]) -> list[dict[str, str]]:
             "actual_start": video.get("liveStreamingDetails", {}).get("actualStartTime"),
             "actual_end": video.get("liveStreamingDetails", {}).get("actualEndTime"),
         }
-        for video in detail_response.json().get("items", [])
+        for video in details
     ]
 
 
@@ -135,8 +154,10 @@ def run(
     digest_notification: bool,
     source_type: str,
 ) -> int:
-    state = load_json(STATE_PATH)
+    state = read_state(STATE_PATH)
     old_sources = state.setdefault("sources", {})
+    source_health = state.setdefault("source_health", {})
+    youtube_cache = state.setdefault("youtube_cache", {})
     errors: list[str] = []
     observations: list[tuple[dict[str, Any], Any]] = []
     calendar_changes: list[tuple[dict[str, Any], Any]] = []
@@ -173,15 +194,30 @@ def run(
             continue
         source_id = source["id"]
         try:
+            if source.get("type") == "youtube":
+                source["_quota"] = state.setdefault("youtube_quota", {})
+                source.update(youtube_cache.get(source_id, {}))
+                source["tracked_video_ids"] = [
+                    v["id"]
+                    for v in old_sources.get(source_id, [])
+                    if v.get("live_status") in ("live", "upcoming") and not v.get("actual_end")
+                ]
             current = fetch(source)
+            if source.get("uploads_playlist_id"):
+                youtube_cache[source_id] = {"uploads_playlist_id": source["uploads_playlist_id"]}
             successful += 1
+            source_health[source_id] = {"ok": True, "checked_at": datetime.now(UTC).isoformat()}
             observations.append((source, current))
             if source.get("type") == "youtube" and isinstance(current, list) and not no_notify:
                 for video in current:
                     scheduled = video.get("scheduled_start") if isinstance(video, dict) else None
                     if not scheduled or not video.get("id"):
                         continue
+                    if video.get("actual_end") or video.get("live_status") not in ("upcoming", "live"):
+                        continue
                     start = datetime.fromisoformat(scheduled.replace("Z", "+00:00"))
+                    if start.tzinfo is None:
+                        raise ValueError("YouTube timestamp has no timezone")
                     minutes_until = round((start - now).total_seconds() / 60)
                     is_live = video.get("live_status") == "live"
                     recently_missed = last_youtube_check <= start <= now and now - start <= timedelta(minutes=30)
@@ -200,9 +236,16 @@ def run(
                         dry_run=dry_run,
                     )
                     live_notifications[notification_key] = now.isoformat()
+                    if not dry_run:
+                        save_state(STATE_PATH, state)
             previous = old_sources.get(source_id)
             notify_source_change = source.get("type") != "youtube"
-            if previous is not None and previous != current and not no_notify and notify_source_change:
+            if (
+                previous is not None
+                and event_signature(previous) != event_signature(current)
+                and not no_notify
+                and notify_source_change
+            ):
                 calendar_changes.append((source, current))
                 changed += 1
             elif previous is not None and previous != current:
@@ -214,15 +257,31 @@ def run(
                 changed += 1
             old_sources[source_id] = current
         except Exception as exc:  # keep other sources running; never erase good state
-            errors.append(f"{source_id}: {exc}")
-            print(f"[warning] {source_id}: {type(exc).__name__}: {exc}", file=sys.stderr)
+            error = safe_error(exc)
+            errors.append(f"{source_id}: {error}")
+            source_health[source_id] = {"ok": False, "checked_at": datetime.now(UTC).isoformat(), "error": error}
+            print(f"[warning] {source_id}: {error}", file=sys.stderr)
     state["initialized"] = True
     if any(source.get("type") == "youtube" for source in active_sources):
         state["last_youtube_check_at"] = now.isoformat()
     if calendar_changes and not no_notify:
-        change_payload = format_change_digest(calendar_changes)
-        if change_payload:
-            send_webhook(change_payload, dry_run=dry_run)
+        pending = state.get("pending_calendar_notification", [])
+        state["pending_calendar_notification"] = sorted(
+            set(pending if isinstance(pending, list) else []) | {s["id"] for s, _ in calendar_changes}
+        )
+    if state.get("pending_calendar_notification") and not no_notify:
+        if not dry_run:
+            save_state(STATE_PATH, state)
+        pending_ids = state["pending_calendar_notification"]
+        fresh_pending = [(s, v) for s, v in observations if s["id"] in pending_ids]
+        payload = format_change_digest(fresh_pending)
+        if payload:
+            send_webhook(payload, dry_run=dry_run)
+        remaining = set(pending_ids) - {s["id"] for s, _ in fresh_pending}
+        if remaining:
+            state["pending_calendar_notification"] = sorted(remaining)
+        else:
+            state.pop("pending_calendar_notification", None)
     if test_notification and not no_notify:
         summary = (
             "✅ DRIFT RADAR — test połączenia Discord\n"
@@ -234,11 +293,23 @@ def run(
         send_webhook(format_upcoming_digest(observations), dry_run=dry_run)
         print("Discord data digest sent")
     if not dry_run:
-        STATE_PATH.write_text(json.dumps(state, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+        state["last_run"] = {
+            "checked_at": datetime.now(UTC).isoformat(),
+            "successful": successful,
+            "errors": len(errors),
+        }
+        save_state(STATE_PATH, state)
     print(
         f"Checked {len(selected_sources)} source(s) in {source_type} mode; {changed} change(s); {len(errors)} error(s)."
     )
     return 1 if active_sources and successful == 0 else 0
+
+
+def event_signature(value: Any) -> str:
+    if not isinstance(value, dict):
+        return json.dumps(value, sort_keys=True)
+    # Text, OCR whitespace and sidebar changes must not trigger calendar spam.
+    return json.dumps(value.get("events", []), sort_keys=True, ensure_ascii=False)
 
 
 if __name__ == "__main__":

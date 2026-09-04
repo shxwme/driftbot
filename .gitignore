@@ -5,3 +5,6 @@ __pycache__/
 .ruff_cache/
 .pytest_cache/
 gitmeta/
+data/
+state.json
+*.tmp

@@ -1,9 +1,12 @@
 from __future__ import annotations
 
 import hashlib
+import os
 import re
+import shutil
 from datetime import date
 from io import BytesIO
+from pathlib import Path
 from typing import Any
 from urllib.parse import urljoin
 
@@ -12,6 +15,14 @@ import pytesseract
 import requests
 from bs4 import BeautifulSoup
 from PIL import Image
+
+_tesseract = os.environ.get("TESSERACT_CMD") or shutil.which("tesseract")
+if not _tesseract and os.name == "nt":
+    _candidate = Path(os.environ.get("ProgramFiles", "C:/Program Files")) / "Tesseract-OCR" / "tesseract.exe"
+    if _candidate.is_file():
+        _tesseract = str(_candidate)
+if _tesseract:
+    pytesseract.pytesseract.tesseract_cmd = _tesseract
 
 MONTHS = {
     "jan": 1,
@@ -73,152 +84,71 @@ MONTHS.update(
 
 
 def extract_date_candidates(text: str, *, default_year: int | None = None) -> list[dict[str, str]]:
-    """Extract conservative, validated date candidates from rendered calendar text."""
+    """Parse date spans once; explicit years win and ambiguous years stay unknown."""
+    import unicodedata
+
+    text = unicodedata.normalize("NFKC", text)
+    text = re.sub(r"(?<=\d)\.\s+", ".", text)
+    years = {int(y) for y in re.findall(r"(?<!\d)(20\d{2})(?!\d)", text)}
+    fallback = default_year or (next(iter(years)) if len(years) == 1 else None)
+    month = "(?:" + "|".join(sorted(MONTHS, key=len, reverse=True)) + ")"
+    spans: list[tuple[int, int]] = []
     found: dict[tuple[str, str], dict[str, str]] = {}
 
-    def add(raw: str, start: date, end: date) -> None:
-        key = (start.isoformat(), end.isoformat())
-        found.setdefault(key, {"raw": raw, "start": key[0], "end": key[1]})
-
-    def is_round_number(match: re.Match[str]) -> bool:
-        """Reject labels such as ``Round 7 Sep`` being read as 7 September."""
-        prefix = text[max(0, match.start() - 16) : match.start()]
-        return bool(re.search(r"(?:round|rnd|rd)\.?\s*$", prefix, re.I))
-
-    for match in re.finditer(r"\b(\d{1,2})\s*[–-]\s*(\d{1,2})[./](\d{1,2})[./](20\d{2})\b", text):
-        day_a, day_b, month, year = map(int, match.groups())
-        try:
-            add(match.group(0), date(year, month, day_a), date(year, month, day_b))
-        except ValueError:
-            continue
-
-    for match in re.finditer(r"\b(\d{1,2})[./](\d{1,2})[./](20\d{2})\b", text):
-        day, month, year = map(int, match.groups())
-        try:
-            value = date(year, month, day)
-            add(match.group(0), value, value)
-        except ValueError:
-            continue
-
-    for match in re.finditer(
-        r"\b([A-Za-z]{3,9})\s+(\d{1,2}),\s*(20\d{2})\s*[–-]\s*"
-        r"([A-Za-z]{3,9})\s+(\d{1,2}),\s*(20\d{2})\b",
-        text,
-    ):
-        month_a, day_a, year_a, month_b, day_b, year_b = match.groups()
-        month_a_num = MONTHS.get(month_a.lower())
-        month_b_num = MONTHS.get(month_b.lower())
-        if not month_a_num or not month_b_num:
-            continue
-        try:
-            start = date(int(year_a), month_a_num, int(day_a))
-            end = date(int(year_b), month_b_num, int(day_b))
-            if end >= start:
-                add(match.group(0), start, end)
-        except ValueError:
-            continue
-
-    for match in re.finditer(
-        r"\b([A-Za-z]{3,9})\s+(\d{1,2})(?:\s*-\s*([A-Za-z]{3,9})?\s*(\d{1,2}))?[, ]+\s*(20\d{2})\b",
-        text,
-    ):
-        month_a, day_a, month_b, day_b, year = match.groups()
-        month_a_num = MONTHS.get(month_a.lower())
-        month_b_num = MONTHS.get((month_b or month_a).lower())
-        if not month_a_num or not month_b_num:
-            continue
-        try:
-            start = date(int(year), month_a_num, int(day_a))
-            end = date(int(year), month_b_num, int(day_b or day_a))
-            if end >= start:
-                add(match.group(0), start, end)
-        except ValueError:
-            continue
-
-    inferred_years = [int(value) for value in re.findall(r"\b(20\d{2})\b", text)]
-    inferred_year = inferred_years[0] if inferred_years else default_year
-    if inferred_year:
-        for match in re.finditer(
-            r"\b(\d{1,2})\s*[–-]\s*(\d{1,2})\s+([A-Za-zÀ-ÿ]{3,12})\b",
-            text,
-            re.I,
-        ):
-            day_a, day_b, month_name = match.groups()
-            month_num = MONTHS.get(month_name.lower())
-            if not month_num:
+    def collect(pattern: str, convert: Any) -> None:
+        for match in re.finditer(pattern, text, re.I):
+            if any(match.start() < end and match.end() > start for start, end in spans):
+                continue
+            # A round label immediately followed by a month is not a date.
+            if re.search(r"(?:round|runda|rnd|rd)\.?\s*$", text[max(0, match.start() - 20) : match.start()], re.I):
                 continue
             try:
-                add(
-                    match.group(0),
-                    date(inferred_year, month_num, int(day_a)),
-                    date(inferred_year, month_num, int(day_b)),
-                )
-            except ValueError:
+                start, end = convert(match)
+                if start is None or end is None or end < start or (end - start).days > 31:
+                    continue
+            except (ValueError, TypeError, KeyError):
                 continue
+            spans.append(match.span())
+            key = (start.isoformat(), end.isoformat())
+            found.setdefault(key, {"raw": match.group(), "start": key[0], "end": key[1]})
 
-        for match in re.finditer(r"\b(\d{1,2})\s+([A-Za-zÀ-ÿ]{3,12})\b", text, re.I):
-            if is_round_number(match):
-                continue
-            day, month_name = match.groups()
-            month_num = MONTHS.get(month_name.lower())
-            if not month_num:
-                continue
-            try:
-                value = date(inferred_year, month_num, int(day))
-                add(match.group(0), value, value)
-            except ValueError:
-                continue
+    def dt(y: Any, m: Any, d: Any) -> date:
+        return date(int(y), MONTHS.get(str(m).lower(), 0) or int(m), int(d))
 
-        for match in re.finditer(r"\b([A-Za-zÀ-ÿ]{3,12})\s+(\d{1,2})\s*[–-]\s*(\d{1,2})\b", text, re.I):
-            month_name, day_a, day_b = match.groups()
-            month_num = MONTHS.get(month_name.lower())
-            if not month_num:
-                continue
-            try:
-                add(
-                    match.group(0),
-                    date(inferred_year, month_num, int(day_a)),
-                    date(inferred_year, month_num, int(day_b)),
-                )
-            except ValueError:
-                continue
-
-        for match in re.finditer(
-            r"\b([A-Za-z]{3,9})\s+(\d{1,2})\s*-\s*([A-Za-z]{3,9})?\s*(\d{1,2})\b",
-            text,
-        ):
-            month_a, day_a, month_b, day_b = match.groups()
-            month_a_num = MONTHS.get(month_a.lower())
-            month_b_num = MONTHS.get((month_b or month_a).lower())
-            if not month_a_num or not month_b_num:
-                continue
-            try:
-                start = date(inferred_year, month_a_num, int(day_a))
-                end = date(inferred_year, month_b_num, int(day_b))
-                if end >= start:
-                    add(match.group(0), start, end)
-            except ValueError:
-                continue
-
-        for match in re.finditer(r"\bdu\s+(\d{1,2})\s+au\s+(\d{1,2})\s+([A-Za-zÀ-ÿ]+)\s+(20\d{2})\b", text, re.I):
-            day_a, day_b, month_name, year = match.groups()
-            month_num = MONTHS.get(month_name.lower())
-            if not month_num:
-                continue
-            try:
-                add(match.group(0), date(int(year), month_num, int(day_a)), date(int(year), month_num, int(day_b)))
-            except ValueError:
-                continue
-
-        for match in re.finditer(r"\b(20\d{2})年(\d{1,2})月(\d{1,2})日(?:[^\d]{0,8}(\d{1,2})月(\d{1,2})日)?", text):
-            year, month_a, day_a, month_b, day_b = match.groups()
-            try:
-                start = date(int(year), int(month_a), int(day_a))
-                end = date(int(year), int(month_b or month_a), int(day_b or day_a))
-                add(match.group(0), start, end)
-            except ValueError:
-                continue
-    return sorted(found.values(), key=lambda item: (item["start"], item["end"], item["raw"]))
+    collect(
+        rf"\b({month})\s+(\d{{1,2}}),?\s+(20\d{{2}})\s*[–-]\s*({month})\s+(\d{{1,2}}),?\s+(20\d{{2}})\b",
+        lambda m: (dt(m[3], m[1], m[2]), dt(m[6], m[4], m[5])),
+    )
+    collect(
+        r"\b(\d{1,2})[./](\d{1,2})[./](20\d{2})\s*[–-]\s*(\d{1,2})[./](\d{1,2})[./](20\d{2})\b",
+        lambda m: (dt(m[3], m[2], m[1]), dt(m[6], m[5], m[4])),
+    )
+    collect(
+        r"\b(\d{1,2})\.(?:(\d{1,2})\.)?\s*[–-]\s*(\d{1,2})\.(\d{1,2})\.(20\d{2})\b",
+        lambda m: (dt(m[5], m[2] or m[4], m[1]), dt(m[5], m[4], m[3])),
+    )
+    collect(
+        r"(?<!\d)(20\d{2})[-/.](\d{1,2})[-/.](\d{1,2})(?!\d)",
+        lambda m: (dt(m[1], m[2], m[3]), dt(m[1], m[2], m[3])),
+    )
+    collect(
+        r"\b(\d{1,2})(?:\s*[–-]\s*(\d{1,2}))?[./](\d{1,2})[./](20\d{2})\b",
+        lambda m: (dt(m[4], m[3], m[1]), dt(m[4], m[3], m[2] or m[1])),
+    )
+    collect(
+        r"(20\d{2})年\s*(\d{1,2})月\s*(\d{1,2})日(?:\([^)]*\))?"
+        r"(?:\s*[～~–-]\s*(?:(\d{1,2})月)?(\d{1,2})日?)?",
+        lambda m: (dt(m[1], m[2], m[3]), dt(m[1], m[4] or m[2], m[5] or m[3])),
+    )
+    collect(
+        rf"\b(?:du\s+)?(\d{{1,2}})(?:st|nd|rd|th)?(?:\s*(?:[–-]|au)\s*(\d{{1,2}})(?:st|nd|rd|th)?)?\s+({month})(?:\s+(20\d{{2}}))?\b",
+        lambda m: (dt(m[4] or fallback, m[3], m[1]), dt(m[4] or fallback, m[3], m[2] or m[1])),
+    )
+    collect(
+        rf"\b({month})\s+(\d{{1,2}})(?:st|nd|rd|th)?(?:\s*[–-]\s*(?:({month})\s+)?(\d{{1,2}}))?(?:,?\s+(20\d{{2}}))?\b",
+        lambda m: (dt(m[5] or fallback, m[1], m[2]), dt(m[5] or fallback, m[3] or m[1], m[4] or m[2])),
+    )
+    return sorted(found.values(), key=lambda item: (item["start"], item["end"]))
 
 
 def fetch_rss(source: dict[str, Any]) -> list[dict[str, str]]:
@@ -237,7 +167,13 @@ def fetch_rss(source: dict[str, Any]) -> list[dict[str, str]]:
 
 
 def fetch_html(source: dict[str, Any]) -> dict[str, Any]:
+    from html import escape
+
+    from parsers.calendars import calendar_events
+
     response = None
+    last_error = None
+    events = []
     for page_url in [source["url"], *source.get("fallback_urls", [])]:
         try:
             candidate = requests.get(
@@ -248,12 +184,29 @@ def fetch_html(source: dict[str, Any]) -> dict[str, Any]:
         except requests.RequestException:
             continue
         if candidate.ok:
+            page = candidate.text
+            if "text/plain" in candidate.headers.get("Content-Type", ""):
+                page = (
+                    "<html><body>" + "".join(f"<p>{escape(line)}</p>" for line in page.splitlines()) + "</body></html>"
+                )
+            candidate_soup = BeautifulSoup(page, "html.parser")
+            try:
+                events = calendar_events(candidate_soup, source)
+            except ValueError as exc:
+                last_error = exc
+                continue
             response = candidate
+            soup = candidate_soup
             break
-    soup = BeautifulSoup(response.text if response is not None else "", "html.parser")
+    if response is None:
+        if last_error:
+            raise last_error
+        if not source.get("image_urls"):
+            raise RuntimeError("Calendar page unavailable")
+        soup = BeautifulSoup("", "html.parser")
     selector = source.get("selector", "body")
     nodes = soup.select(selector)
-    if not nodes and selector != "body":
+    if not nodes and selector != "body" and not source.get("parser"):
         nodes = soup.select("body")
     if not nodes and not source.get("image_urls"):
         raise RuntimeError(f"CSS selector {selector!r} matched nothing")
@@ -262,6 +215,9 @@ def fetch_html(source: dict[str, Any]) -> dict[str, Any]:
         "date_candidates": extract_date_candidates(text, default_year=source.get("calendar_year")),
         "items": [" ".join(node.get_text(" ", strip=True).split()) for node in nodes],
     }
+    result["events"] = events
+    result["retrieved_url"] = response.url if response is not None else source["url"]
+    result["verification"] = "verified" if result["events"] else "unverified"
     if source.get("include_images"):
         images = []
         image_refs = [
@@ -303,17 +259,22 @@ def fetch_html(source: dict[str, Any]) -> dict[str, Any]:
                 if len(image_response.content) > 12 * 1024 * 1024:
                     raise RuntimeError("calendar image is too large")
                 image_bytes = image_response.content
-                ocr_text = pytesseract.image_to_string(Image.open(BytesIO(image_bytes)), timeout=45)
+                image = Image.open(BytesIO(image_bytes))
+                ocr_text = pytesseract.image_to_string(image, config="--psm 6", timeout=45)
+                second_text = pytesseract.image_to_string(image, config="--psm 11", timeout=45)
+                second_dates = {
+                    (c["start"], c["end"])
+                    for c in extract_date_candidates(second_text, default_year=source.get("calendar_year"))
+                }
+                first_dates = extract_date_candidates(ocr_text, default_year=source.get("calendar_year"))
                 images.append(
                     {
                         "url": image_url,
                         "alt": alt,
                         "sha256": hashlib.sha256(image_bytes).hexdigest(),
                         "ocr_text": " ".join(ocr_text.split()),
-                        "date_candidates": extract_date_candidates(
-                            ocr_text,
-                            default_year=source.get("calendar_year"),
-                        ),
+                        "date_candidates": first_dates,
+                        "agreed_dates": [c for c in first_dates if (c["start"], c["end"]) in second_dates],
                     }
                 )
             except pytesseract.TesseractNotFoundError:
@@ -331,11 +292,13 @@ def fetch_html(source: dict[str, Any]) -> dict[str, Any]:
             {f"{item['start']}|{item['end']}": item for item in ocr_dates}.values(),
             key=lambda item: (item["start"], item["end"]),
         )
-        text_ranges = {(item["start"], item["end"]) for item in result["date_candidates"]}
+        text_ranges = {(item["start"], item["end"]) for item in result["events"]}
         ocr_ranges = {(item["start"], item["end"]) for item in result["ocr_date_candidates"]}
         matched_ranges = text_ranges & ocr_ranges
         if text_ranges and ocr_ranges:
-            verification_status = "verified" if matched_ranges else "mismatch"
+            verification_status = (
+                "verified" if text_ranges == ocr_ranges else "partial_match" if matched_ranges else "mismatch"
+            )
         elif ocr_ranges:
             verification_status = "ocr_only"
         else:
@@ -349,4 +312,20 @@ def fetch_html(source: dict[str, Any]) -> dict[str, Any]:
         if source.get("ocr_required", True) and image_refs and not images:
             details = "; ".join(error["error"] for error in result.get("image_errors", []))
             raise RuntimeError(f"calendar OCR failed: {details or 'no image was processed'}")
+        # Image-only sources require two OCR layouts to agree. OCR remains fallible;
+        # publish the provenance explicitly and never synthesize a round number.
+        if source.get("ocr_publish") and not result["events"]:
+            for image in images:
+                for candidate in image.get("agreed_dates", []):
+                    result["events"].append(
+                        {
+                            **candidate,
+                            "label": source.get("event_label", "Wydarzenie"),
+                            "verified": True,
+                            "verification": "ocr_agreement",
+                            "source_url": image["url"],
+                            "evidence": candidate["raw"],
+                        }
+                    )
+            result["verification"] = "ocr_agreement" if result["events"] else "unverified"
     return result

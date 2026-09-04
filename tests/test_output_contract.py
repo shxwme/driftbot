@@ -1,30 +1,33 @@
-from __future__ import annotations
-
-import json
 import unittest
-from datetime import date
-from pathlib import Path
+from datetime import datetime, timedelta
+from unittest.mock import patch
 
-ROOT = Path(__file__).resolve().parents[1]
-
-
-class StateContractTests(unittest.TestCase):
-    def test_calendar_state_has_valid_structured_dates(self) -> None:
-        state = json.loads((ROOT / "state.json").read_text(encoding="utf-8"))
-        html_entries = [value for key, value in state["sources"].items() if key.endswith("calendar")]
-        self.assertTrue(html_entries, "No HTML source state found")
-        with_dates = 0
-        for entry in html_entries:
-            self.assertIsInstance(entry, dict, "HTML source state must be an object")
-            candidates = entry.get("date_candidates") or entry.get("ocr_date_candidates") or []
-            if candidates:
-                with_dates += 1
-            for candidate in candidates:
-                start = date.fromisoformat(candidate["start"])
-                end = date.fromisoformat(candidate["end"])
-                self.assertLessEqual(start, end)
-        self.assertGreaterEqual(with_dates / len(html_entries), 0.8)
+from discord_notify import LOCAL_TZ, format_upcoming_digest
+from main import load_sources
 
 
-if __name__ == "__main__":
-    unittest.main()
+class OutputContractTests(unittest.TestCase):
+    @patch("discord_notify.warsaw_now", return_value=datetime(2026, 9, 5, tzinfo=LOCAL_TZ))
+    def test_large_digest_fits_discord_limits(self, _now):
+        events = []
+        for index in range(40):
+            day = (datetime(2026, 9, 5) + timedelta(days=index)).date().isoformat()
+            source = {"name": "Series " + "x" * 200, "url": "https://example.com"}
+            events.append(
+                (source, {"events": [{"start": day, "end": day, "label": "Round " + "y" * 400, "verified": True}]})
+            )
+        embed = format_upcoming_digest(events)["embeds"][0]
+        count = len(embed["title"]) + len(embed["description"]) + len(embed["footer"]["text"])
+        for field in embed["fields"]:
+            self.assertLessEqual(len(field["name"]), 256)
+            self.assertLessEqual(len(field["value"]), 1024)
+            count += len(field["name"]) + len(field["value"])
+        self.assertLessEqual(count, 6000)
+        self.assertLessEqual(len(embed["fields"]), 25)
+
+    def test_source_ids_are_unique_and_parser_years_explicit(self):
+        sources = load_sources()
+        self.assertEqual(len(sources), len({s["id"] for s in sources}))
+        for source in sources:
+            if source.get("parser"):
+                self.assertIsInstance(source["calendar_year"], int)

@@ -56,7 +56,8 @@ class NotificationTests(unittest.TestCase):
         self.assertIn("02:35", rendered)
         self.assertIn("NOC Z 29.08 NA 30.08", rendered)
 
-    def test_change_notification_is_an_embed_with_source_links(self) -> None:
+    @patch("discord_notify.warsaw_now", return_value=datetime(2026, 8, 29, 20, 0, tzinfo=LOCAL_TZ))
+    def test_change_notification_is_an_embed_with_source_links(self, _mock_now) -> None:
         source = {
             "id": "dmp-calendar",
             "name": "DMP",
@@ -64,7 +65,7 @@ class NotificationTests(unittest.TestCase):
             "watch_url": "https://youtube.com/example",
         }
         after = {
-            "date_candidates": [{"raw": "30.08.2026", "start": "2026-08-30", "end": "2026-08-30"}],
+            "events": [{"verified": True, "raw": "30.08.2026", "start": "2026-08-30", "end": "2026-08-30"}],
             "items": ["RND 1 30.08.2026"],
         }
         payload = format_change_digest([(source, after)])
@@ -72,11 +73,12 @@ class NotificationTests(unittest.TestCase):
         self.assertNotIn("Poprzedni odczyt", str(payload))
         self.assertIn("https://youtube.com/example", str(payload))
 
-    def test_multiple_calendar_changes_are_batched_into_one_embed(self) -> None:
-        candidates = [{"raw": "30.08.2026", "start": "2026-08-30", "end": "2026-08-30"}]
+    @patch("discord_notify.warsaw_now", return_value=datetime(2026, 8, 29, 20, 0, tzinfo=LOCAL_TZ))
+    def test_multiple_calendar_changes_are_batched_into_one_embed(self, _mock_now) -> None:
+        candidates = [{"verified": True, "raw": "30.08.2026", "start": "2026-08-30", "end": "2026-08-30"}]
         observations = [
-            ({"id": "one", "name": "One", "url": "https://one.example"}, {"date_candidates": candidates}),
-            ({"id": "two", "name": "Two", "url": "https://two.example"}, {"date_candidates": candidates}),
+            ({"id": "one", "name": "One", "url": "https://one.example"}, {"events": candidates}),
+            ({"id": "two", "name": "Two", "url": "https://two.example"}, {"events": candidates}),
         ]
         payload = format_change_digest(observations)
         self.assertEqual(len(payload["embeds"]), 1)
@@ -86,7 +88,7 @@ class NotificationTests(unittest.TestCase):
     def test_past_only_calendar_change_is_silent(self, _mock_now) -> None:
         source = {"id": "calendar", "name": "Calendar", "url": "https://example.com"}
         after = {
-            "date_candidates": [{"raw": "01.01.2026", "start": "2026-01-01", "end": "2026-01-01"}],
+            "events": [{"verified": True, "raw": "01.01.2026", "start": "2026-01-01", "end": "2026-01-01"}],
             "items": [],
         }
         self.assertIsNone(format_change_digest([(source, after)]))

@@ -5,13 +5,13 @@ from datetime import date
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-state = json.loads((ROOT / "state.json").read_text(encoding="utf-8"))
+state = json.loads((ROOT / "data" / "state.json").read_text(encoding="utf-8"))
 missing: list[str] = []
 invalid: list[str] = []
 for source_id, entry in state["sources"].items():
     if not source_id.endswith("calendar"):
         continue
-    candidates = entry.get("date_candidates", [])
+    candidates = entry.get("events", [])
     if not candidates:
         missing.append(source_id)
         continue

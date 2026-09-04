@@ -1,0 +1,11 @@
+.git
+gitmeta
+.venv
+.env
+data
+state.json
+__pycache__
+assets
+research
+tests
+.ruff_cache
