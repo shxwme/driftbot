@@ -6,3 +6,4 @@ Pillow>=10,<12
 pytesseract>=0.3.13,<0.4
 tzdata>=2025.1
 waitress>=3.0.2,<4
+discord.py>=2.5,<3

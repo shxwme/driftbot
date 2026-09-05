@@ -117,3 +117,8 @@ python tests/check_dates.py
 Ostatnia kontrola zwraca 2 przy źródłach bez zweryfikowanych dat — nie oznacza to,
 że należy je zgadywać. Ręczny odczyt zapisuje `data/state.json`; demon używa własnych,
 oddzielnych plików. Historyczny główny `state.json` nie jest już wersjonowany ani używany.
+# Discord commands
+
+The Render service can run the automatic webhook notifier and a Discord slash-command bot in the same process. Set `DISCORD_BOT_TOKEN` and `DISCORD_CLIENT_ID` as Render environment variables. Optionally set `DISCORD_GUILD_ID` for immediate guild-scoped command sync; without it, commands sync globally.
+
+Available commands: `/next`, `/today`, and `/series nazwa`. The bot reads the same verified calendar and YouTube state as the scheduled jobs, so it does not scrape independently or publish unverified dates.

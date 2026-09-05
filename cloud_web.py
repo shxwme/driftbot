@@ -86,4 +86,7 @@ def application(environ, start_response):
 if __name__ == "__main__":
     from waitress import serve
 
+    from discord_bot import start_bot
+
+    start_bot()
     serve(application, host="0.0.0.0", port=int(os.environ.get("PORT", "10000")), threads=4)
