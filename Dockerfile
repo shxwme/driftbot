@@ -7,7 +7,7 @@ WORKDIR /app
 COPY requirements.txt ./
 RUN pip install --no-cache-dir -r requirements.txt
 COPY main.py discord_notify.py service.py storage.py sources.yaml ./
-COPY cloud_store.py cloud_job.py cloud_web.py ./
+COPY cloud_store.py cloud_job.py cloud_web.py discord_bot.py ./
 COPY parsers ./parsers
 USER drift
 VOLUME /data
