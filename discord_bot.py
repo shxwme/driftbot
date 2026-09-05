@@ -95,7 +95,7 @@ def _embed_payload(payload: dict[str, Any]) -> tuple[str, discord.Embed, discord
 class DriftRadarBot(commands.Bot):
     def __init__(self) -> None:
         intents = discord.Intents.none()
-        super().__init__(command_prefix="!", intents=intents)
+        super().__init__(command_prefix=[], intents=intents)
 
     async def setup_hook(self) -> None:
         guild_id = os.environ.get("DISCORD_GUILD_ID")
