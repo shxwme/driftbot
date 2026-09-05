@@ -9,6 +9,12 @@ import discord_bot
 
 
 class DiscordBotTests(unittest.TestCase):
+    def test_slash_commands_include_help(self):
+        self.assertEqual(
+            {command.name for command in discord_bot.bot.tree.get_commands()},
+            {"next", "today", "series", "help"},
+        )
+
     def test_filters_youtube_events_by_polish_day(self):
         source = {"id": "d1", "name": "D1GP"}
         videos = [

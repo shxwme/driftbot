@@ -96,6 +96,7 @@ class DriftRadarBot(commands.Bot):
     def __init__(self) -> None:
         intents = discord.Intents.none()
         super().__init__(command_prefix=[], intents=intents)
+        self._guild_sync_done: set[int] = set()
 
     async def setup_hook(self) -> None:
         guild_id = os.environ.get("DISCORD_GUILD_ID")
@@ -110,6 +111,18 @@ class DriftRadarBot(commands.Bot):
 
     async def on_ready(self) -> None:
         LOGGER.info("Discord bot connected as %s", self.user)
+        # Global commands can take a while to propagate. Guild sync makes the
+        # commands appear immediately in every server where this bot is installed.
+        for guild in self.guilds:
+            if guild.id in self._guild_sync_done:
+                continue
+            try:
+                self.tree.copy_global_to(guild=guild)
+                synced = await self.tree.sync(guild=guild)
+                self._guild_sync_done.add(guild.id)
+                LOGGER.info("Synced %d commands to guild %s (%s)", len(synced), guild.name, guild.id)
+            except Exception:
+                LOGGER.exception("Guild command sync failed for %s (%s)", guild.name, guild.id)
 
 
 bot = DriftRadarBot()
@@ -162,6 +175,41 @@ async def series_events(interaction: discord.Interaction, nazwa: str) -> None:
         await interaction.followup.send("Nie udało się pobrać danych. Spróbuj ponownie za chwilę.", ephemeral=True)
 
 
+@bot.tree.command(name="help", description="Pokaż pomoc i wszystkie komendy Drift Radar")
+async def help_command(interaction: discord.Interaction) -> None:
+    embed = discord.Embed(
+        title="🏁 DRIFT RADAR · Centrum dowodzenia",
+        description=(
+            "Twój osobisty radar driftingu.\n"
+            "Wybierz komendę poniżej, a dostaniesz wyłącznie potwierdzone dane "
+            "z kalendarzy i oficjalnych transmisji."
+        ),
+        color=0x8B5CF6,
+    )
+    embed.add_field(
+        name="📡 /next",
+        value="Najbliższe rundy i zaplanowane transmisje — z godziną w Polsce i linkiem do oglądania.",
+        inline=False,
+    )
+    embed.add_field(
+        name="🔥 /today",
+        value="Wszystko, co dzieje się dzisiaj, w tym nocne transmisje oznaczone jako 🌙.",
+        inline=False,
+    )
+    embed.add_field(
+        name="🏆 /series",
+        value="Wpisz nazwę lub fragment serii, np. `/series D1GP` albo `/series Drift Masters`.",
+        inline=False,
+    )
+    embed.add_field(
+        name="🔔 Automatyczne alerty",
+        value="Bot sam powiadamia o nowych terminach oraz transmisjach startujących za około 10 minut.",
+        inline=False,
+    )
+    embed.set_footer(text="Drift Radar · Europe/Warsaw · dane z oficjalnych źródeł")
+    await interaction.response.send_message(embed=embed)
+
+
 def start_bot() -> threading.Thread | None:
     token = os.environ.get("DISCORD_BOT_TOKEN")
     if not token:
@@ -170,7 +218,8 @@ def start_bot() -> threading.Thread | None:
 
     def runner() -> None:
         try:
-            bot.run(token, log_handler=None)
+            logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
+            bot.run(token)
         except Exception:
             LOGGER.exception("Discord bot stopped")
 
