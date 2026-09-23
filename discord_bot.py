@@ -203,7 +203,11 @@ async def help_command(interaction: discord.Interaction) -> None:
     )
     embed.add_field(
         name="🔔 Automatyczne alerty",
-        value="Bot sam powiadamia o nowych terminach oraz transmisjach startujących za około 10 minut.",
+        value=(
+            "Jedno krótkie przypomnienie z linkiem około 10 minut przed transmisją. "
+            "Bez codziennych zestawień. Jeśli start wykryję dopiero na żywo, "
+            "powiadomię wtedy — bez drugiej wiadomości."
+        ),
         inline=False,
     )
     embed.set_footer(text="Drift Radar · Europe/Warsaw · dane z oficjalnych źródeł")

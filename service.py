@@ -45,6 +45,8 @@ def worker(mode: str, interval: int, once: bool, dry_run: bool) -> bool:
         try:
             env = {**os.environ, "DRIFT_STATE_PATH": str((DATA / f"{mode}.json").resolve())}
             args = [sys.executable, str(ROOT / "main.py"), "--source-type", mode, "--bootstrap"]
+            if mode == "calendar":
+                args.append("--no-notify")
             if dry_run:
                 args.append("--dry-run")
             # Calendar errors or OCR cannot block the independent live worker.
@@ -119,10 +121,6 @@ def serve(once: bool = False, dry_run: bool = False, mode: str = "all") -> int:
         if mode not in ("all", name):
             continue
         thread = threading.Thread(target=run_worker, args=(name, interval), name=name)
-        thread.start()
-        threads.append(thread)
-    if not once and not dry_run:
-        thread = threading.Thread(target=daily_digest, name="digest")
         thread.start()
         threads.append(thread)
     for thread in threads:

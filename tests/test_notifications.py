@@ -9,11 +9,11 @@ from main import live_notification_key
 
 
 class NotificationTests(unittest.TestCase):
-    def test_pre_alert_does_not_block_live_alert(self) -> None:
+    def test_pre_alert_blocks_duplicate_live_alert(self) -> None:
         scheduled = "2026-09-05T23:45:00Z"
         pre = live_notification_key("fd", "video", scheduled, is_live=False)
         live = live_notification_key("fd", "video", scheduled, is_live=True)
-        self.assertNotEqual(pre, live)
+        self.assertEqual(pre, live)
 
     def test_live_alert_converts_utc_to_warsaw_and_marks_overnight(self) -> None:
         payload = format_live_alert(

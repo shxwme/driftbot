@@ -141,8 +141,8 @@ def prune_live_notifications(notifications: dict[str, Any], cutoff: datetime) ->
 
 
 def live_notification_key(source_id: str, video_id: str, scheduled: str, *, is_live: bool) -> str:
-    stage = "live" if is_live else "pre"
-    return f"{source_id}:{video_id}:{scheduled}:{stage}"
+    # Video identity survives status, schedule and source changes.
+    return f"video:{video_id}"
 
 
 def run(
@@ -240,7 +240,11 @@ def run(
                         scheduled,
                         is_live=is_live,
                     )
-                    if notification_key in live_notifications:
+                    legacy_sent = any(
+                        key.split(":", 2)[1:2] == [video["id"]]
+                        for key in live_notifications
+                    )
+                    if notification_key in live_notifications or legacy_sent:
                         continue
                     send_webhook(
                         format_live_alert(source.get("name", source_id), video, minutes_until),

@@ -24,6 +24,28 @@ ENV = {
 
 @patch.dict(os.environ, ENV)
 class CloudTests(unittest.TestCase):
+    def test_automatic_digest_is_disabled_even_at_former_send_hours(self):
+        with (
+            patch("cloud_job.warsaw_now", return_value=datetime(2026, 9, 5, 9, tzinfo=UTC)),
+            patch("cloud_job.read_remote") as read,
+            patch("cloud_job.send_webhook") as send,
+        ):
+            self.assertEqual(cloud_job.digest(), 0)
+            read.assert_not_called()
+            send.assert_not_called()
+
+    def test_calendar_refresh_is_silent(self):
+        with (
+            patch("cloud_job.assert_lease"),
+            patch("cloud_job.read_remote", return_value={}),
+            patch("cloud_job.main.load_sources", return_value=[]),
+            patch("cloud_job.calendar_source", return_value="test"),
+            patch("cloud_job.main.run", return_value=0) as run,
+            patch.dict(os.environ, {}),
+        ):
+            cloud_job.run("calendar")
+            self.assertTrue(run.call_args.kwargs["no_notify"])
+
     def request(self, path, method="POST", auth=True):
         status = []
         env = {"PATH_INFO": path, "REQUEST_METHOD": method}

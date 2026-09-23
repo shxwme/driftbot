@@ -26,6 +26,11 @@ def calendar_source(state: dict, sources: list, now: datetime) -> str | None:
 
 
 def digest() -> int:
+    # Keep the existing cron endpoint compatible, but never push routine digests.
+    return 0
+
+
+def manual_digest() -> int:
     now = warsaw_now()
     if now.hour not in (9, 19):
         return 0
@@ -64,7 +69,7 @@ def run(kind: str) -> int:
     return main.run(
         dry_run=False,
         bootstrap=True,
-        no_notify=False,
+        no_notify=kind == "calendar",
         test_notification=False,
         digest_notification=False,
         source_type=kind,

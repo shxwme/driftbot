@@ -14,7 +14,7 @@ from storage import read_state, safe_error, save_state
 
 
 class RuntimeTests(unittest.TestCase):
-    def test_polling_sends_prealert_once_then_live_after_restart(self):
+    def test_polling_sends_only_one_reminder_across_live_and_rescheduling(self):
         with tempfile.TemporaryDirectory() as folder:
             path = Path(folder) / "youtube.json"
             fixed_now = datetime(2026, 9, 5, 23, 36, tzinfo=UTC)
@@ -47,8 +47,31 @@ class RuntimeTests(unittest.TestCase):
                 video["live_status"] = "live"
                 main.run(**args)
                 main.run(**args)
-                self.assertEqual(send.call_count, 2)
-                self.assertIn("LIVE TERAZ", str(send.call_args))
+                self.assertEqual(send.call_count, 1)
+                video["scheduled_start"] = "2026-09-05T23:46:00Z"
+                main.run(**args)
+                self.assertEqual(send.call_count, 1)
+
+    def test_existing_legacy_reminder_does_not_repeat_after_upgrade(self):
+        with tempfile.TemporaryDirectory() as folder:
+            path = Path(folder) / "youtube.json"
+            now = datetime.now(UTC)
+            video = {
+                "id": "session", "title": "Round 1", "live_status": "live",
+                "scheduled_start": now.isoformat(),
+            }
+            save_state(path, {"live_notifications": {
+                "old-source:session:2026-09-01T00:00:00Z:pre": now.isoformat(),
+            }})
+            with (
+                patch.object(main, "STATE_PATH", path),
+                patch.object(main, "load_sources", return_value=[{"id": "new-source", "type": "youtube"}]),
+                patch.object(main, "fetch", return_value=[video]),
+                patch.object(main, "send_webhook") as send,
+            ):
+                main.run(dry_run=False, bootstrap=True, no_notify=False,
+                         test_notification=False, digest_notification=False, source_type="youtube")
+                send.assert_not_called()
 
     @patch.dict(os.environ, {"DISCORD_WEBHOOK_URL": "https://example.com/private-token"})
     def test_webhook_requests_confirmed_delivery_and_link_components(self):

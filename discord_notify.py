@@ -146,14 +146,13 @@ def format_live_alert(source_name: str, video: dict[str, Any], minutes_until: in
         timing = f"Planowany start był **{abs(minutes_until)} min temu** — transmisja może już trwać."
     night = _overnight_label(start)
     return {
-        "content": f"{status} · **{source_name}**",
+        "content": "",
         "embeds": [
             {
                 "title": f"{status} · {source_name}",
-                "description": f"{timing}\n\n{_discord_time(start)}",
+                "description": f"**{title}**\n{timing}\n[▶ Oglądaj transmisję](https://www.youtube.com/watch?v={video['id']})",
                 "color": 0xE63946 if live else 0xFFB703,
                 "fields": [
-                    {"name": "🏁 Transmisja", "value": f"**{title}**", "inline": False},
                     {
                         "name": "🕒 Czas w Polsce",
                         "value": f"**{start:%d.%m.%Y · %H:%M}**" + (f"\n{night}" if night else ""),
